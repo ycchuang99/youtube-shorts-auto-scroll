@@ -4,16 +4,23 @@
   "version": "1.0",
   "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage",
+    "tabs"
   ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "assets/images/scroll-icon.png"
+    }
+  },
+  "icons": {
+    "16": "assets/images/scroll-icon.png"
+  },
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/shorts/*"],
-      "js": ["content.js"]
+      "js": ["src/content.js"]
     }
-  ],
-  "icons": {
-    "48": "icon48.png",
-    "128": "icon128.png"
-  }
+  ]
 }
