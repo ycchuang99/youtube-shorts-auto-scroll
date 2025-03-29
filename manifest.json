@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Shorts Auto Scroll",
+  "version": "1.0",
+  "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/shorts/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
