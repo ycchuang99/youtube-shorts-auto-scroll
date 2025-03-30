@@ -11,11 +11,16 @@
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": {
-      "16": "assets/images/scroll-icon.png"
-    }
+      "16": "assets/images/scroll-icon-16.png",
+      "48": "assets/images/scroll-icon-48.png",
+      "128": "assets/images/scroll-icon-128.png"
+    },
+    "default_title": "YouTube Shorts Auto Scroll"
   },
   "icons": {
-    "16": "assets/images/scroll-icon.png"
+    "16": "assets/images/scroll-icon-16.png",
+    "48": "assets/images/scroll-icon-48.png",
+    "128": "assets/images/scroll-icon-128.png"
   },
   "content_scripts": [
     {

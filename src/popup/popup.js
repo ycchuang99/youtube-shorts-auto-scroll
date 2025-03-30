@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!isYouTubeShorts) {
       toggle.disabled = true;
-      
+
       return;
     }
 
