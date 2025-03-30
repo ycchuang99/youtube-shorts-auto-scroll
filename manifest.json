@@ -5,8 +5,7 @@
   "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
   "permissions": [
     "activeTab",
-    "storage",
-    "tabs"
+    "storage"
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
