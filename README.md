@@ -1,4 +1,4 @@
-# ![scroll-icon-128.png](assets/images/scroll-icon-16.png) YouTube Shorts Auto Scroll
+# <img src="assets/images/scroll-icon-128.png" alt="Scroll Icon" width="24" height="24" /> YouTube Shorts Auto Scroll
 
 A browser extension that automatically scrolls to the next YouTube Shorts video when the current one ends.
 
@@ -10,4 +10,6 @@ A browser extension that automatically scrolls to the next YouTube Shorts video 
 2. Search for "YouTube Shorts Auto Scroll"
 3. Click "Add extension"
 
-![demo.png](assets/images/demo.png)
+## Demo
+
+![Demo](assets/images/demo.png)
