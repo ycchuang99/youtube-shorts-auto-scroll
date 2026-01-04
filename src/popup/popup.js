@@ -8,24 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Get current tab to check if we're on YouTube Shorts
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    // Check if we're on YouTube and specifically in the Shorts section
-    const isYouTube = tab?.url?.includes('youtube.com');
-    const isYouTubeShorts = tab?.url?.includes('youtube.com/shorts');
-
-    if (!isYouTube) {
-      toggle.disabled = true;
-      status.textContent = 'Please open YouTube first';
-      status.style.color = 'red';
-      return;
-    }
-
-    if (!isYouTubeShorts) {
-      toggle.disabled = true;
-      status.textContent = 'Please navigate to YouTube Shorts';
-      status.style.color = 'red';
-      return;
-    }
 
     // Load saved state
     const { enabled = true } = await chrome.storage.sync.get('enabled');
