@@ -1,48 +1,39 @@
-// Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', async () => {
-  const toggle = document.getElementById('toggleButton');
-  const status = document.createElement('div');
-  status.className = 'status';
-  document.body.appendChild(status);
+  const toggle = document.getElementById('toggleButton')
+  const status = document.getElementById('status')
   
-  try {
-    // Get current tab to check if we're on YouTube Shorts
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // Load saved state
+  const { enabled = true } = await chrome.storage.sync.get('enabled')
+  toggle.checked = enabled
+  updateStatus(enabled)
 
-    // Load saved state
-    const { enabled = true } = await chrome.storage.sync.get('enabled');
-    toggle.checked = enabled;
-    status.textContent = enabled ? 'Auto-scroll is enabled' : 'Auto-scroll is disabled';
-    status.style.color = enabled ? 'green' : 'gray';
-
-    // Handle toggle changes
-    toggle.addEventListener('change', async () => {
-      const enabled = toggle.checked;
-      
-      // Save state
-      await chrome.storage.sync.set({ enabled });
-      status.textContent = enabled ? 'Auto-scroll is enabled' : 'Auto-scroll is disabled';
-      status.style.color = enabled ? 'green' : 'gray';
-      
-      // Notify content script
-      try {
-        await chrome.tabs.sendMessage(tab.id, { 
-          action: 'toggleAutoScroll',
-          enabled 
-        });
-      } catch (err) {
-        // If content script isn't ready, disable toggle
-        toggle.checked = !enabled;
-        toggle.disabled = true;
-        status.textContent = 'Error: Please refresh the page';
-        status.style.color = 'red';
-      }
-    });
+  // Handle toggle changes
+  toggle.addEventListener('change', async () => {
+    const enabled = toggle.checked
     
-  } catch (err) {
-    // If any error occurs, disable the toggle
-    toggle.disabled = true;
-    status.textContent = 'Error: Please refresh the page';
-    status.style.color = 'red';
+    // Save state
+    await chrome.storage.sync.set({ enabled })
+    updateStatus(enabled)
+    
+    // Notify content script (silently fail if not on YouTube)
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      await chrome.tabs.sendMessage(tab.id, { 
+        action: 'toggleAutoScroll',
+        enabled 
+      })
+    } catch (err) {
+      // Silently ignore - content script might not be loaded
+    }
+  })
+
+  function updateStatus(enabled) {
+    if (enabled) {
+      status.textContent = '✓ Enabled'
+      status.className = 'status status-enabled'
+    } else {
+      status.textContent = '○ Disabled'
+      status.className = 'status status-disabled'
+    }
   }
-});
+})

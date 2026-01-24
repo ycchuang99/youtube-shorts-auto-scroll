@@ -1,1 +1,22 @@
+# macOS
 .DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Testing
+coverage/
+*.log
+
+# Build artifacts
+*.zip
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+AGENTS.md
