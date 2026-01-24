@@ -1,0 +1,219 @@
+ :root {
+     --primary-color: #ff0000;
+     --primary-gradient: linear-gradient(135deg, #ff4b2b, #ff416c);
+     --bg-color: #f8f9fa;
+     --text-color: #1a1a1a;
+     --text-secondary: #6c757d;
+     --card-bg: #ffffff;
+     --toggle-off: #dee2e6;
+     --shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+ }
+
+ @media (prefers-color-scheme: dark) {
+     :root {
+         --bg-color: #121212;
+         --text-color: #f8f9fa;
+         --text-secondary: #adb5bd;
+         --card-bg: #1e1e1e;
+         --toggle-off: #343a40;
+         --shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+     }
+ }
+
+ body {
+     width: 280px;
+     margin: 0;
+     padding: 0;
+     font-family: var(--font-family);
+     background-color: var(--bg-color);
+     color: var(--text-color);
+     overflow: hidden;
+ }
+
+ .container {
+     width: 100%;
+     padding: 20px;
+     display: flex;
+     flex-direction: column;
+     gap: 16px;
+     background: var(--bg-color);
+     box-sizing: border-box;
+ }
+
+ .header {
+     display: flex;
+     align-items: center;
+     gap: 12px;
+ }
+
+ .logo-icon-wrapper {
+     width: 40px;
+     height: 40px;
+     background: white;
+     border-radius: 10px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+     transform: rotate(-5deg);
+     transition: transform 0.3s ease;
+     overflow: hidden;
+     flex-shrink: 0;
+ }
+
+ .header:hover .logo-icon-wrapper {
+     transform: rotate(0deg) scale(1.05);
+ }
+
+ .logo-icon {
+     width: 28px;
+     height: 28px;
+     object-fit: contain;
+ }
+
+ h1 {
+     margin: 0;
+     font-size: 18px;
+     font-weight: 700;
+     color: var(--text-color);
+     letter-spacing: -0.02em;
+ }
+
+ .card {
+     background-color: var(--card-bg);
+     padding: 16px;
+     border-radius: 14px;
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     box-shadow: var(--shadow);
+     border: 1px solid rgba(255, 255, 255, 0.05);
+     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+ }
+
+ .card:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+ }
+
+ .card-info {
+     display: flex;
+     flex-direction: column;
+     gap: 4px;
+ }
+
+ .card-title {
+     font-size: 15px;
+     font-weight: 700;
+     color: var(--text-color);
+ }
+
+ .card-subtitle {
+     font-size: 11px;
+     color: var(--text-secondary);
+     font-weight: 500;
+ }
+
+ /* Switch Styling */
+ .switch {
+     position: relative;
+     display: inline-block;
+     width: 48px;
+     height: 28px;
+     flex-shrink: 0;
+ }
+
+ .switch input {
+     opacity: 0;
+     width: 0;
+     height: 0;
+ }
+
+ .slider {
+     position: absolute;
+     cursor: pointer;
+     top: 0;
+     left: 0;
+     right: 0;
+     bottom: 0;
+     background-color: var(--toggle-off);
+     transition: .4s cubic-bezier(0.4, 0, 0.2, 1);
+     border-radius: 28px;
+ }
+
+ .slider:before {
+     position: absolute;
+     content: "";
+     height: 22px;
+     width: 22px;
+     left: 3px;
+     bottom: 3px;
+     background-color: white;
+     transition: .4s cubic-bezier(0.4, 0, 0.2, 1);
+     border-radius: 50%;
+     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+ }
+
+ input:checked + .slider {
+     background: var(--primary-gradient);
+ }
+
+ input:checked + .slider:before {
+     transform: translateX(20px);
+ }
+
+ .switch:active .slider:before {
+     width: 26px;
+ }
+
+ input:checked + .slider:active:before {
+     transform: translateX(16px);
+ }
+
+ /* Status Indicator */
+ .status {
+     font-size: 12px;
+     text-align: center;
+     padding: 10px 14px;
+     border-radius: 10px;
+     font-weight: 600;
+     animation: fadeIn 0.3s ease;
+     transition: all 0.3s ease;
+ }
+
+ .status-enabled {
+     background-color: rgba(34, 197, 94, 0.1);
+     color: #16a34a;
+     border: 1px solid rgba(34, 197, 94, 0.2);
+ }
+
+ .status-disabled {
+     background-color: rgba(148, 163, 184, 0.1);
+     color: #64748b;
+     border: 1px solid rgba(148, 163, 184, 0.2);
+ }
+
+ @media (prefers-color-scheme: dark) {
+     .status-enabled {
+         background-color: rgba(34, 197, 94, 0.15);
+         color: #22c55e;
+     }
+     
+     .status-disabled {
+         background-color: rgba(148, 163, 184, 0.15);
+         color: #94a3b8;
+     }
+ }
+
+ @keyframes fadeIn {
+     from {
+         opacity: 0;
+         transform: translateY(10px);
+     }
+
+     to {
+         opacity: 1;
+         transform: translateY(0);
+     }
+ }
