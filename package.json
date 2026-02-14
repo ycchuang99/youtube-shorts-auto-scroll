@@ -1,15 +1,17 @@
 {
   "name": "youtube-shorts-auto-scroll",
-  "version": "1.0.3",
+  "version": "1.1.1",
   "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "build": "npm run clean && npm run package",
+    "package": "zip -r youtube-shorts-auto-scroll.zip manifest.json src/ -x '*.DS_Store'"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/youtube-shorts-auto-scroll.git"
+    "url": "https://github.com/ycchuang99/youtube-shorts-auto-scroll.git"
   },
   "keywords": [
     "youtube",
@@ -17,7 +19,7 @@
     "chrome-extension",
     "auto-scroll"
   ],
-  "author": "",
+  "author": "Evan Chuang",
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.268",

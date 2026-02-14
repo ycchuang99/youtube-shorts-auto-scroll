@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Shorts Auto Scroll",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
   "permissions": [
     "activeTab",

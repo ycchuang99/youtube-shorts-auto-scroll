@@ -446,4 +446,291 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       expect(reel2.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
     })
   })
+
+  describe('Helper Functions', () => {
+    describe('isElementVisible', () => {
+      test('should return false when element is null', () => {
+        expect(contentScript.isElementVisible(null)).toBe(false)
+      })
+
+      test('should return false when element is undefined', () => {
+        expect(contentScript.isElementVisible(undefined)).toBe(false)
+      })
+
+      test('should return true when element has positive dimensions and is visible', () => {
+        const element = document.createElement('div')
+        element.style.visibility = 'visible'
+        
+        Object.defineProperty(element, 'getBoundingClientRect', {
+          value: jest.fn(() => ({
+            height: 100,
+            width: 100,
+            top: 0,
+            left: 0,
+            bottom: 100,
+            right: 100
+          }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        expect(contentScript.isElementVisible(element)).toBe(true)
+      })
+
+      test('should return false when element has zero height', () => {
+        const element = document.createElement('div')
+        
+        Object.defineProperty(element, 'getBoundingClientRect', {
+          value: jest.fn(() => ({
+            height: 0,
+            width: 100
+          }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        expect(contentScript.isElementVisible(element)).toBe(false)
+      })
+
+      test('should return false when element has zero width', () => {
+        const element = document.createElement('div')
+        
+        Object.defineProperty(element, 'getBoundingClientRect', {
+          value: jest.fn(() => ({
+            height: 100,
+            width: 0
+          }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        expect(contentScript.isElementVisible(element)).toBe(false)
+      })
+
+      test('should return false when element visibility is hidden', () => {
+        const element = document.createElement('div')
+        
+        Object.defineProperty(element, 'getBoundingClientRect', {
+          value: jest.fn(() => ({
+            height: 100,
+            width: 100
+          }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'hidden'
+        }))
+        
+        expect(contentScript.isElementVisible(element)).toBe(false)
+      })
+    })
+
+    describe('getActiveVideo', () => {
+      test('should return video when legacy is-active attribute exists', () => {
+        document.body.innerHTML = ''
+        const reel = document.createElement('ytd-reel-video-renderer')
+        reel.setAttribute('is-active', '')
+        const video = document.createElement('video')
+        reel.appendChild(video)
+        document.body.appendChild(reel)
+        
+        expect(contentScript.getActiveVideo()).toBe(video)
+      })
+
+      test('should return first visible video when is-active does not exist', () => {
+        document.body.innerHTML = ''
+        
+        const reel1 = document.createElement('ytd-reel-video-renderer')
+        const video1 = document.createElement('video')
+        reel1.appendChild(video1)
+        document.body.appendChild(reel1)
+        
+        const reel2 = document.createElement('ytd-reel-video-renderer')
+        const video2 = document.createElement('video')
+        reel2.appendChild(video2)
+        document.body.appendChild(reel2)
+        
+        // Setup mocks for visibility
+        Object.defineProperty(video1, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 100 }))
+        })
+        Object.defineProperty(video2, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 100, width: 100 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        const result = contentScript.getActiveVideo()
+        
+        expect(result).toBe(video2)
+      })
+
+      test('should return null when no videos exist', () => {
+        document.body.innerHTML = ''
+        
+        expect(contentScript.getActiveVideo()).toBeNull()
+      })
+
+      test('should return null when all videos are invisible', () => {
+        document.body.innerHTML = ''
+        
+        const reel = document.createElement('ytd-reel-video-renderer')
+        const video = document.createElement('video')
+        reel.appendChild(video)
+        document.body.appendChild(reel)
+        
+        Object.defineProperty(video, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'hidden'
+        }))
+        
+        const result = contentScript.getActiveVideo()
+        
+        expect(result).toBeNull()
+      })
+
+      test('should skip invisible videos and find the visible one', () => {
+        document.body.innerHTML = ''
+        
+        const reel1 = document.createElement('ytd-reel-video-renderer')
+        const video1 = document.createElement('video')
+        reel1.appendChild(video1)
+        document.body.appendChild(reel1)
+        
+        const reel2 = document.createElement('ytd-reel-video-renderer')
+        const video2 = document.createElement('video')
+        reel2.appendChild(video2)
+        document.body.appendChild(reel2)
+        
+        const reel3 = document.createElement('ytd-reel-video-renderer')
+        const video3 = document.createElement('video')
+        reel3.appendChild(video3)
+        document.body.appendChild(reel3)
+        
+        // Setup mocks: first invisible, second invisible, third visible
+        Object.defineProperty(video1, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        Object.defineProperty(video2, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        Object.defineProperty(video3, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 100, width: 100 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        const result = contentScript.getActiveVideo()
+        
+        expect(result).toBe(video3)
+      })
+    })
+
+    describe('getActiveReel', () => {
+      test('should return reel when legacy is-active attribute exists', () => {
+        document.body.innerHTML = ''
+        const reel = document.createElement('ytd-reel-video-renderer')
+        reel.setAttribute('is-active', '')
+        document.body.appendChild(reel)
+        
+        expect(contentScript.getActiveReel()).toBe(reel)
+      })
+
+      test('should return first visible reel when is-active does not exist', () => {
+        document.body.innerHTML = ''
+        
+        const reel1 = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel1)
+        
+        const reel2 = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel2)
+        
+        // Setup mocks for visibility
+        Object.defineProperty(reel1, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 100 }))
+        })
+        Object.defineProperty(reel2, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 100, width: 100 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        const result = contentScript.getActiveReel()
+        
+        expect(result).toBe(reel2)
+      })
+
+      test('should return null when no reels exist', () => {
+        document.body.innerHTML = ''
+        
+        expect(contentScript.getActiveReel()).toBeNull()
+      })
+
+      test('should return null when all reels are invisible', () => {
+        document.body.innerHTML = ''
+        
+        const reel = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel)
+        
+        Object.defineProperty(reel, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'hidden'
+        }))
+        
+        const result = contentScript.getActiveReel()
+        
+        expect(result).toBeNull()
+      })
+
+      test('should skip invisible reels and find the visible one', () => {
+        document.body.innerHTML = ''
+        
+        const reel1 = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel1)
+        
+        const reel2 = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel2)
+        
+        const reel3 = document.createElement('ytd-reel-video-renderer')
+        document.body.appendChild(reel3)
+        
+        // Setup mocks: first invisible, second invisible, third visible
+        Object.defineProperty(reel1, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        Object.defineProperty(reel2, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 0, width: 0 }))
+        })
+        Object.defineProperty(reel3, 'getBoundingClientRect', {
+          value: jest.fn(() => ({ height: 100, width: 100 }))
+        })
+        
+        window.getComputedStyle = jest.fn(() => ({
+          visibility: 'visible'
+        }))
+        
+        const result = contentScript.getActiveReel()
+        
+        expect(result).toBe(reel3)
+      })
+    })
+  })
 })
