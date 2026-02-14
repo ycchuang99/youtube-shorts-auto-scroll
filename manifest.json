@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Shorts Auto Scroll",
-  "version": "1.2.2",
+  "version": "1.2.0",
   "description": "Auto-scroll to next Shorts video and skip ads automatically",
   "permissions": [
     "activeTab",
