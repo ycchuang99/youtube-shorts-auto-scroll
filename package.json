@@ -1,7 +1,7 @@
 {
   "name": "youtube-shorts-auto-scroll",
-  "version": "1.1.1",
-  "description": "Automatically scrolls to the next YouTube Shorts video when the current one ends",
+  "version": "1.2.0",
+  "description": "Auto-scroll to next Shorts video and skip ads automatically",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",

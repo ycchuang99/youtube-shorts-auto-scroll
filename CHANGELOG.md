@@ -2,6 +2,35 @@
 
 All notable changes to the YouTube Shorts Auto Scroll extension will be documented in this file.
 
+## [1.2.0] - 2026-02-14
+
+### Added
+- **🎯 Auto-skip ads feature** - Automatically detects and skips YouTube ads in Shorts and regular videos
+- **Hybrid ad-skip approach** - Speeds up ads to 10x playback + auto-clicks skip button when available
+- **Multi-selector fallback chain** - Works with 5+ skip button selector variants for maximum compatibility
+- **Dual detection system** - MutationObserver + 500ms interval for reliable ad detection
+- **Toggleable ad skip** - New "Auto-skip Ads" toggle in popup UI
+- **Persistent preferences** - Ad skip setting saved via chrome.storage.sync
+
+### Technical Implementation
+- `isAdPlaying()` - Detects ads via `#movie_player` classes (`ad-showing`, `ad-interrupting`) and skip button presence
+- `tryClickSkipButton()` - Multi-selector click handler (`.ytp-ad-skip-button-modern`, `.ytp-ad-skip-button`, etc.)
+- `handleAd()` - Mutes video, speeds to 10x, attempts skip button click, restores playback after ad
+- `initAdSkip()` - Initializes MutationObserver on `#movie_player` + 500ms polling interval
+- `stopAdSkip()` - Cleanup function disconnects observers, clears intervals, restores video state
+
+### UI Changes
+- New "Auto-skip Ads" card in popup with toggle switch
+- Updated status messages: "✓ Both enabled", "✓ Auto-scroll enabled", "✓ Ad skip enabled"
+- Consistent styling with existing auto-scroll toggle
+
+### Verified
+- ✅ All 70 unit tests pass
+- ✅ Works on YouTube Shorts and regular videos
+- ✅ No breaking changes to existing functionality
+- ✅ Zero console errors
+- ✅ Proper cleanup on disable/unload
+
 ## [1.1.1] - 2026-02-14
 
 ### Fixed
