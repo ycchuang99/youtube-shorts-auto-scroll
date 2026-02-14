@@ -3,6 +3,47 @@
   // Global enabled state
   let isEnabled = true;
 
+  // Helper function to check if an element is visible in viewport
+  function isElementVisible(element) {
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.height > 0 && rect.width > 0 && 
+           getComputedStyle(element).visibility !== 'hidden';
+  }
+
+  // Helper function to find the currently active video
+  function getActiveVideo() {
+    // Try legacy is-active first for backward compatibility
+    let video = document.querySelector('ytd-reel-video-renderer[is-active] video');
+    if (video) return video;
+    
+    // Fallback: Find first visible video in viewport
+    const renderers = document.querySelectorAll('ytd-reel-video-renderer');
+    for (const renderer of renderers) {
+      const video = renderer.querySelector('video');
+      if (video && isElementVisible(video)) {
+        return video;
+      }
+    }
+    return null;
+  }
+
+  // Helper function to find the currently active reel renderer
+  function getActiveReel() {
+    // Try legacy is-active first for backward compatibility
+    let reel = document.querySelector('ytd-reel-video-renderer[is-active]');
+    if (reel) return reel;
+    
+    // Fallback: Find first visible reel in viewport
+    const renderers = document.querySelectorAll('ytd-reel-video-renderer');
+    for (const renderer of renderers) {
+      if (isElementVisible(renderer)) {
+        return renderer;
+      }
+    }
+    return null;
+  }
+
   function scrollToNextVideo() {
     if (!isEnabled) return;
 
@@ -15,9 +56,9 @@
       nextButton.click();
     } else {
       // Fallback to manual scroll if button not found
-      const reelsContainer = document.querySelector('ytd-reel-video-renderer[is-active]');
-      if (reelsContainer) {
-        const nextReel = reelsContainer.nextElementSibling;
+      const activeReel = getActiveReel();
+      if (activeReel) {
+        const nextReel = activeReel.nextElementSibling;
         if (nextReel && nextReel.tagName.toLowerCase() === 'ytd-reel-video-renderer') {
           nextReel.scrollIntoView({ behavior: 'smooth' });
         }
@@ -25,12 +66,10 @@
     }
   }
 
-  // Function to check if a video element is playing
   function isVideoPlaying(video) {
     return !!(video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2);
   }
 
-  // Function to check if we are on a shorts page
   function isShortsPage() {
     return window.location.pathname.includes('/shorts/');
   }
@@ -43,24 +82,19 @@
     return isEnabled;
   }
 
-  // Function to handle video end detection
   function handleVideoEnd() {
     if (!isEnabled || !isShortsPage()) return;
 
-    // Find the active video in the shorts player
-    const activeVideo = document.querySelector('ytd-reel-video-renderer[is-active] video');
+    const activeVideo = getActiveVideo();
     if (activeVideo) {
-      // Remove existing event listeners to prevent duplicates
       activeVideo.removeEventListener('ended', scrollToNextVideo);
       activeVideo.removeEventListener('timeupdate', checkVideoProgress);
 
-      // Add event listeners
       activeVideo.addEventListener('ended', scrollToNextVideo);
       activeVideo.addEventListener('timeupdate', checkVideoProgress);
     }
   }
 
-  // Function to check video progress
   function checkVideoProgress(event) {
     if (!isEnabled || !isShortsPage()) return;
 
@@ -72,7 +106,6 @@
 
   let reelObserver = null;
 
-  // Create a function to check for active video changes
   function checkForActiveVideoChanges() {
     if (!isEnabled || !isShortsPage()) return;
 
@@ -84,22 +117,28 @@
       if (!isEnabled) return;
 
       mutations.forEach((mutation) => {
+        // Handle attribute changes (backward compatibility for is-active)
         if (mutation.type === 'attributes' && mutation.attributeName === 'is-active') {
+          handleVideoEnd();
+        }
+        // Handle new video elements being added
+        if (mutation.type === 'childList') {
           handleVideoEnd();
         }
       });
     });
 
-    // Observe changes to is-active attribute
+    // Observe each reel for changes
     document.querySelectorAll('ytd-reel-video-renderer').forEach(reel => {
       reelObserver.observe(reel, {
         attributes: true,
-        attributeFilter: ['is-active']
+        attributeFilter: ['is-active'],
+        childList: true,
+        subtree: true
       });
     });
   }
 
-  // Global page observer to detect new videos or navigation
   let pageObserver = null;
 
   function setupPageObserver() {
@@ -124,7 +163,6 @@
       });
     });
 
-    // Start observing the document
     pageObserver.observe(document.body, {
       childList: true,
       subtree: true
@@ -151,7 +189,10 @@
       setupPageObserver,
       init,
       setEnabled,
-      getEnabled
+      getEnabled,
+      getActiveVideo,
+      getActiveReel,
+      isElementVisible
     };
   }
 
