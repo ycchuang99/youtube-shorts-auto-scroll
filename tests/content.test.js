@@ -85,13 +85,13 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    test('should not scroll when disabled', () => {
+    test('should scroll even when auto-scroll is disabled (for ad-skip feature)', () => {
       const clickSpy = jest.spyOn(mockNextButton, 'click')
       
       contentScript.setEnabled(false)
       contentScript.scrollToNextVideo()
       
-      expect(clickSpy).not.toHaveBeenCalled()
+      expect(clickSpy).toHaveBeenCalled()
     })
 
     test('should use fallback scroll when button not found', () => {
@@ -730,6 +730,501 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         const result = contentScript.getActiveReel()
         
         expect(result).toBe(reel3)
+      })
+    })
+  })
+
+  describe('Ad Skip Functionality', () => {
+    let mockPlayer
+    let mockVideo
+    let originalConsoleLog
+
+    beforeEach(() => {
+      document.body.innerHTML = ''
+      
+      mockPlayer = document.createElement('div')
+      mockPlayer.id = 'movie_player'
+      document.body.appendChild(mockPlayer)
+      
+      mockVideo = document.createElement('video')
+      Object.defineProperty(mockVideo, 'muted', {
+        writable: true,
+        value: false
+      })
+      Object.defineProperty(mockVideo, 'playbackRate', {
+        writable: true,
+        value: 1.0
+      })
+      Object.defineProperty(mockVideo, 'duration', {
+        writable: true,
+        value: 30
+      })
+      Object.defineProperty(mockVideo, 'currentTime', {
+        writable: true,
+        value: 0
+      })
+      document.body.appendChild(mockVideo)
+      
+      originalConsoleLog = console.log
+      console.log = jest.fn()
+    })
+
+    afterEach(() => {
+      console.log = originalConsoleLog
+    })
+
+    describe('isAdPlaying', () => {
+      test('should detect ad via .html5-video-player.ad-showing', () => {
+        const htmlPlayer = document.createElement('div')
+        htmlPlayer.className = 'html5-video-player ad-showing'
+        document.body.appendChild(htmlPlayer)
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should detect ad via #movie_player.ad-showing', () => {
+        mockPlayer.classList.add('ad-showing')
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should detect ad via .video-ads.ytp-ad-module with children', () => {
+        const adModule = document.createElement('div')
+        adModule.className = 'video-ads ytp-ad-module'
+        const adChild = document.createElement('div')
+        adModule.appendChild(adChild)
+        document.body.appendChild(adModule)
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should not detect ad when .video-ads.ytp-ad-module has no children', () => {
+        const adModule = document.createElement('div')
+        adModule.className = 'video-ads ytp-ad-module'
+        document.body.appendChild(adModule)
+        
+        expect(contentScript.isAdPlaying()).toBe(false)
+      })
+
+      test('should detect ad via legacy ad-interrupting class', () => {
+        mockPlayer.classList.add('ad-interrupting')
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should detect ad via skip button presence', () => {
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button-modern'
+        mockPlayer.appendChild(skipButton)
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should return false when no ad indicators present', () => {
+        expect(contentScript.isAdPlaying()).toBe(false)
+      })
+
+      test('should detect Shorts ad via ytd-ad-slot-renderer in active reel', () => {
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should detect Shorts ad via .ytd-ad-slot-renderer class in active reel', () => {
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('div')
+        adSlot.className = 'ytd-ad-slot-renderer'
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        expect(contentScript.isAdPlaying()).toBe(true)
+      })
+
+      test('should not detect Shorts ad when ytd-ad-slot-renderer not in active reel', () => {
+        const inactiveReel = document.createElement('ytd-reel-video-renderer')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        inactiveReel.appendChild(adSlot)
+        document.body.appendChild(inactiveReel)
+        
+        expect(contentScript.isAdPlaying()).toBe(false)
+      })
+
+      test('should not detect Shorts ad when no active reel exists', () => {
+        expect(contentScript.isAdPlaying()).toBe(false)
+      })
+    })
+
+    describe('tryClickSkipButton', () => {
+      test('should click #movie_player .ytp-ad-skip-button-modern', () => {
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button-modern'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: document.body
+        })
+        mockPlayer.appendChild(skipButton)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(clickSpy).toHaveBeenCalled()
+        expect(result).toBe(true)
+      })
+
+      test('should click #movie_player .ytp-ad-skip-button', () => {
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: document.body
+        })
+        mockPlayer.appendChild(skipButton)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(clickSpy).toHaveBeenCalled()
+        expect(result).toBe(true)
+      })
+
+      test('should click .html5-video-player scoped skip button', () => {
+        const htmlPlayer = document.createElement('div')
+        htmlPlayer.className = 'html5-video-player'
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: document.body
+        })
+        htmlPlayer.appendChild(skipButton)
+        document.body.appendChild(htmlPlayer)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(clickSpy).toHaveBeenCalled()
+        expect(result).toBe(true)
+      })
+
+      test('should not click invisible button (offsetParent null)', () => {
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: null
+        })
+        mockPlayer.appendChild(skipButton)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(clickSpy).not.toHaveBeenCalled()
+        expect(result).toBe(false)
+      })
+
+      test('should click overlay close button as fallback', () => {
+        const closeButton = document.createElement('button')
+        closeButton.className = 'ytp-ad-overlay-close-button'
+        Object.defineProperty(closeButton, 'offsetParent', {
+          value: document.body
+        })
+        document.body.appendChild(closeButton)
+        
+        const clickSpy = jest.spyOn(closeButton, 'click')
+        
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(clickSpy).toHaveBeenCalled()
+        expect(result).toBe(true)
+      })
+
+      test('should return false when no buttons found', () => {
+        const result = contentScript.tryClickSkipButton()
+        
+        expect(result).toBe(false)
+      })
+    })
+
+    describe('handleAd', () => {
+      beforeEach(() => {
+        mockPlayer.classList.add('ad-showing')
+        Object.defineProperty(mockVideo, 'duration', {
+          writable: true,
+          value: 30
+        })
+      })
+
+      test('should mute and speed up video when ad is playing', () => {
+        contentScript.handleAd()
+        
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(16.0)
+      })
+
+      test('should skip to end of video when ad is playing', () => {
+        contentScript.handleAd()
+        
+        expect(mockVideo.currentTime).toBeGreaterThan(29)
+      })
+
+      test('should restore playback when ad is not playing', () => {
+        mockVideo.muted = true
+        mockVideo.playbackRate = 16.0
+        mockPlayer.classList.remove('ad-showing')
+        
+        contentScript.handleAd()
+        
+        expect(mockVideo.playbackRate).toBe(1.0)
+        expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should attempt to click skip button when ad playing', () => {
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: document.body
+        })
+        mockPlayer.appendChild(skipButton)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        contentScript.handleAd()
+        
+        expect(clickSpy).toHaveBeenCalled()
+      })
+
+      test('should not run when no video element exists', () => {
+        document.body.removeChild(mockVideo)
+        
+        contentScript.handleAd()
+        
+        expect(mockPlayer.classList.contains('ad-showing')).toBe(true)
+      })
+
+      test('should handle multiple video elements', () => {
+        const video2 = document.createElement('video')
+        Object.defineProperty(video2, 'muted', {
+          writable: true,
+          value: false
+        })
+        Object.defineProperty(video2, 'playbackRate', {
+          writable: true,
+          value: 1.0
+        })
+        Object.defineProperty(video2, 'duration', {
+          writable: true,
+          value: 15
+        })
+        Object.defineProperty(video2, 'currentTime', {
+          writable: true,
+          value: 0
+        })
+        document.body.appendChild(video2)
+        
+        contentScript.handleAd()
+        
+        expect(mockVideo.muted).toBe(true)
+        expect(video2.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(16.0)
+        expect(video2.playbackRate).toBe(16.0)
+      })
+
+      test('should scroll to next video when Shorts ad is detected', () => {
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        const nextButton = document.createElement('button')
+        nextButton.setAttribute('aria-label', '下一個影片')
+        Object.defineProperty(nextButton, 'offsetParent', {
+          value: document.body
+        })
+        const navigation = document.createElement('div')
+        navigation.id = 'navigation-button-down'
+        navigation.appendChild(nextButton)
+        activeReel.appendChild(navigation)
+        
+        const clickSpy = jest.spyOn(nextButton, 'click')
+        
+        contentScript.handleAd()
+        
+        expect(clickSpy).toHaveBeenCalled()
+      })
+
+      test('should use regular video ad skip for non-Shorts ads', () => {
+        mockPlayer.classList.add('ad-showing')
+        
+        contentScript.handleAd()
+        
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(16.0)
+      })
+
+      test('should not scroll when Shorts ad detected but in inactive reel', () => {
+        const inactiveReel = document.createElement('ytd-reel-video-renderer')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        inactiveReel.appendChild(adSlot)
+        document.body.appendChild(inactiveReel)
+        
+        const scrollSpy = jest.spyOn(contentScript, 'scrollToNextVideo')
+        
+        contentScript.handleAd()
+        
+        expect(scrollSpy).not.toHaveBeenCalled()
+      })
+
+      test('should try skip button first before scrolling for Shorts ads', () => {
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        const skipButton = document.createElement('button')
+        skipButton.className = 'ytp-ad-skip-button'
+        Object.defineProperty(skipButton, 'offsetParent', {
+          value: document.body
+        })
+        mockPlayer.appendChild(skipButton)
+        
+        const clickSpy = jest.spyOn(skipButton, 'click')
+        
+        contentScript.handleAd()
+        
+        expect(clickSpy).toHaveBeenCalled()
+      })
+
+      test('should not scroll multiple times for same Shorts ad (cooldown)', () => {
+        jest.useFakeTimers()
+        
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        const nextButton = document.createElement('button')
+        nextButton.setAttribute('aria-label', '下一個影片')
+        Object.defineProperty(nextButton, 'offsetParent', {
+          value: document.body
+        })
+        const navigation = document.createElement('div')
+        navigation.id = 'navigation-button-down'
+        navigation.appendChild(nextButton)
+        activeReel.appendChild(navigation)
+        
+        const clickSpy = jest.spyOn(nextButton, 'click')
+        
+        contentScript.handleAd()
+        expect(clickSpy).toHaveBeenCalledTimes(1)
+        
+        jest.advanceTimersByTime(500)
+        contentScript.handleAd()
+        expect(clickSpy).toHaveBeenCalledTimes(1)
+        
+        jest.advanceTimersByTime(1600)
+        contentScript.handleAd()
+        expect(clickSpy).toHaveBeenCalledTimes(2)
+        
+        jest.useRealTimers()
+      })
+
+      test('should reset cooldown when no ad is playing', () => {
+        jest.useFakeTimers()
+        
+        const activeReel = document.createElement('ytd-reel-video-renderer')
+        activeReel.setAttribute('is-active', '')
+        const adSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(adSlot)
+        document.body.appendChild(activeReel)
+        
+        const nextButton = document.createElement('button')
+        nextButton.setAttribute('aria-label', '下一個影片')
+        Object.defineProperty(nextButton, 'offsetParent', {
+          value: document.body
+        })
+        const navigation = document.createElement('div')
+        navigation.id = 'navigation-button-down'
+        navigation.appendChild(nextButton)
+        activeReel.appendChild(navigation)
+        
+        const clickSpy = jest.spyOn(nextButton, 'click')
+        
+        contentScript.handleAd()
+        expect(clickSpy).toHaveBeenCalledTimes(1)
+        
+        adSlot.remove()
+        contentScript.handleAd()
+        
+        const newAdSlot = document.createElement('ytd-ad-slot-renderer')
+        activeReel.appendChild(newAdSlot)
+        
+        jest.advanceTimersByTime(100)
+        contentScript.handleAd()
+        expect(clickSpy).toHaveBeenCalledTimes(2)
+        
+        jest.useRealTimers()
+      })
+    })
+
+    describe('initAdSkip', () => {
+      test('should set up interval and observer', () => {
+        jest.useFakeTimers()
+        
+        contentScript.initAdSkip()
+        
+        expect(window.adSkipInterval).toBeDefined()
+        jest.clearAllTimers()
+        jest.useRealTimers()
+      })
+
+      test('should handle gracefully when movie_player not found', () => {
+        document.body.removeChild(mockPlayer)
+        
+        // Should not throw error
+        expect(() => contentScript.initAdSkip()).not.toThrow()
+      })
+
+      test('should log when ad skip is disabled', () => {
+        contentScript.stopAdSkip()
+        
+        expect(console.log).not.toHaveBeenCalledWith('[AdSkip] Ad skip is disabled')
+      })
+    })
+
+    describe('stopAdSkip', () => {
+      beforeEach(() => {
+        jest.useFakeTimers()
+        contentScript.initAdSkip()
+        mockVideo.muted = true
+        mockVideo.playbackRate = 10.0
+      })
+
+      afterEach(() => {
+        jest.clearAllTimers()
+        jest.useRealTimers()
+      })
+
+      test('should clear interval', () => {
+        const intervalId = window.adSkipInterval
+        
+        contentScript.stopAdSkip()
+        
+        expect(window.adSkipInterval).toBeNull()
+      })
+
+      test('should restore video to normal playback', () => {
+        contentScript.stopAdSkip()
+        
+        expect(mockVideo.playbackRate).toBe(1.0)
+        expect(mockVideo.muted).toBe(false)
       })
     })
   })
