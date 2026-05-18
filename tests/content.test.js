@@ -53,6 +53,7 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
     
     // Ensure enabled
     contentScript.setEnabled(true)
+    contentScript.setPlaybackSpeed(1.0)
   })
 
   describe('isShortsPage', () => {
@@ -171,6 +172,50 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       
       contentScript.setEnabled(false)
       expect(contentScript.getEnabled()).toBe(false)
+    })
+  })
+
+  describe('Playback Speed Control', () => {
+    beforeEach(() => {
+      window.history.pushState({}, '', '/shorts/test123')
+    })
+
+    test('should set and get playback speed', () => {
+      contentScript.setPlaybackSpeed(1.5)
+
+      expect(contentScript.getPlaybackSpeed()).toBe(1.5)
+    })
+
+    test('should default invalid playback speed to normal speed', () => {
+      contentScript.setPlaybackSpeed('fast')
+
+      expect(contentScript.getPlaybackSpeed()).toBe(1.0)
+    })
+
+    test('should apply playback speed to active Shorts video', () => {
+      contentScript.setPlaybackSpeed(1.75)
+
+      expect(mockVideo.playbackRate).toBe(1.75)
+    })
+
+    test('should apply playback speed when video handlers attach', () => {
+      contentScript.setPlaybackSpeed(1.25)
+      mockVideo.playbackRate = 1.0
+
+      contentScript.handleVideoEnd()
+
+      expect(mockVideo.playbackRate).toBe(1.25)
+    })
+
+    test('should not apply playback speed outside Shorts pages', () => {
+      window.history.pushState({}, '', '/watch?v=abc')
+      contentScript.setPlaybackSpeed(1.5)
+      mockVideo.playbackRate = 1.0
+
+      const result = contentScript.applyPlaybackSpeed()
+
+      expect(result).toBe(false)
+      expect(mockVideo.playbackRate).toBe(1.0)
     })
   })
 
@@ -975,10 +1020,25 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       test('should restore playback when ad is not playing', () => {
         mockVideo.muted = true
         mockVideo.playbackRate = 16.0
+        contentScript.setPlaybackSpeed(1.5)
+        window.history.pushState({}, '', '/shorts/test123')
         mockPlayer.classList.remove('ad-showing')
         
         contentScript.handleAd()
         
+        expect(mockVideo.playbackRate).toBe(1.5)
+        expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should restore non-Shorts video playback to normal speed', () => {
+        window.history.pushState({}, '', '/watch?v=abc')
+        mockVideo.muted = true
+        mockVideo.playbackRate = 16.0
+        contentScript.setPlaybackSpeed(1.5)
+        mockPlayer.classList.remove('ad-showing')
+
+        contentScript.handleAd()
+
         expect(mockVideo.playbackRate).toBe(1.0)
         expect(mockVideo.muted).toBe(false)
       })
@@ -1221,6 +1281,19 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       })
 
       test('should restore video to normal playback', () => {
+        window.history.pushState({}, '', '/shorts/test123')
+        contentScript.setPlaybackSpeed(1.75)
+
+        contentScript.stopAdSkip()
+        
+        expect(mockVideo.playbackRate).toBe(1.75)
+        expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should restore non-Shorts video to normal playback', () => {
+        window.history.pushState({}, '', '/watch?v=abc')
+        contentScript.setPlaybackSpeed(1.75)
+
         contentScript.stopAdSkip()
         
         expect(mockVideo.playbackRate).toBe(1.0)

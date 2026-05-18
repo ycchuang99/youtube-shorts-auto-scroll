@@ -3,6 +3,7 @@
   // Global enabled state
   let isEnabled = true;
   let autoSkipAds = true;
+  let playbackSpeed = 1.0;
   let lastAdSkipTime = 0;
   let lastSkippedAdElement = null;
 
@@ -81,11 +82,44 @@
     return isEnabled;
   }
 
+  function normalizePlaybackSpeed(value) {
+    const speed = Number(value);
+    if (!Number.isFinite(speed) || speed <= 0) {
+      return 1.0;
+    }
+    return speed;
+  }
+
+  function applyPlaybackSpeed(video) {
+    if (!isShortsPage()) return false;
+    if (isAdPlaying()) return false;
+
+    const targetVideo = video || getActiveVideo();
+    if (!targetVideo) return false;
+
+    targetVideo.playbackRate = playbackSpeed;
+    return true;
+  }
+
+  function setPlaybackSpeed(value) {
+    playbackSpeed = normalizePlaybackSpeed(value);
+    applyPlaybackSpeed();
+  }
+
+  function getPlaybackSpeed() {
+    return playbackSpeed;
+  }
+
+  function getRestoredPlaybackSpeed() {
+    return isShortsPage() ? playbackSpeed : 1.0;
+  }
+
   function handleVideoEnd() {
     if (!isEnabled || !isShortsPage()) return;
 
     const activeVideo = getActiveVideo();
     if (activeVideo) {
+      applyPlaybackSpeed(activeVideo);
       activeVideo.removeEventListener('ended', scrollToNextVideo);
       activeVideo.removeEventListener('timeupdate', checkVideoProgress);
 
@@ -171,6 +205,7 @@
   function init() {
     if (isShortsPage()) {
       handleVideoEnd();
+      applyPlaybackSpeed();
       checkForActiveVideoChanges();
       setupPageObserver();
     }
@@ -297,9 +332,10 @@
       // Reset tracking when no ad is playing
       lastSkippedAdElement = null;
       
+      const restoredPlaybackSpeed = getRestoredPlaybackSpeed();
       videos.forEach((video, index) => {
-        if (video.playbackRate !== 1.0) {
-          video.playbackRate = 1.0;
+        if (video.playbackRate !== restoredPlaybackSpeed) {
+          video.playbackRate = restoredPlaybackSpeed;
         }
         if (video.muted) {
           video.muted = false;
@@ -360,7 +396,7 @@
     
     const video = document.querySelector('video');
     if (video) {
-      video.playbackRate = 1.0;
+      video.playbackRate = getRestoredPlaybackSpeed();
       video.muted = false;
     }
   }
@@ -378,6 +414,10 @@
       init,
       setEnabled,
       getEnabled,
+      setPlaybackSpeed,
+      getPlaybackSpeed,
+      getRestoredPlaybackSpeed,
+      applyPlaybackSpeed,
       getActiveVideo,
       getActiveReel,
       isElementVisible,
@@ -392,9 +432,10 @@
   // Browser execution (only when not in test environment)
   if (typeof window !== 'undefined' && typeof chrome !== 'undefined' && chrome.storage) {
     // Load initial state
-    chrome.storage.sync.get(['enabled', 'adSkipEnabled'], function (result) {
+    chrome.storage.sync.get(['enabled', 'adSkipEnabled', 'playbackSpeed'], function (result) {
       isEnabled = result.enabled !== false;
       autoSkipAds = result.adSkipEnabled !== false;
+      playbackSpeed = normalizePlaybackSpeed(result.playbackSpeed ?? 1.0);
       init();
       initAdSkip();
     });
@@ -422,6 +463,10 @@
           stopAdSkip();
         }
       }
+
+      if (message.action === "setPlaybackSpeed") {
+        setPlaybackSpeed(message.playbackSpeed);
+      }
     });
 
     // Re-attach listeners when page visibility changes
@@ -441,6 +486,9 @@
       isShortsPage,
       setEnabled,
       getEnabled,
+      setPlaybackSpeed,
+      getPlaybackSpeed,
+      applyPlaybackSpeed,
       isAdPlaying
     };
   }
