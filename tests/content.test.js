@@ -1252,6 +1252,23 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         expect(() => contentScript.initAdSkip()).not.toThrow()
       })
 
+      test('should not stack duplicate timeupdate listeners on repeated init', () => {
+        const addEventSpy = jest.spyOn(mockVideo, 'addEventListener')
+        const removeEventSpy = jest.spyOn(mockVideo, 'removeEventListener')
+
+        contentScript.initAdSkip()
+        contentScript.initAdSkip()
+
+        const addTimeupdateCalls = addEventSpy.mock.calls.filter(([eventName]) => eventName === 'timeupdate')
+        const removeTimeupdateCalls = removeEventSpy.mock.calls.filter(([eventName]) => eventName === 'timeupdate')
+
+        expect(addTimeupdateCalls).toHaveLength(2)
+        expect(removeTimeupdateCalls).toHaveLength(2)
+        expect(addTimeupdateCalls[0][1]).toBe(addTimeupdateCalls[1][1])
+        expect(removeTimeupdateCalls[0][1]).toBe(addTimeupdateCalls[0][1])
+        expect(removeTimeupdateCalls[1][1]).toBe(addTimeupdateCalls[1][1])
+      })
+
       test('should log when ad skip is disabled', () => {
         contentScript.stopAdSkip()
         
@@ -1278,6 +1295,14 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         contentScript.stopAdSkip()
         
         expect(window.adSkipInterval).toBeNull()
+      })
+
+      test('should remove timeupdate listener from current video', () => {
+        const removeEventSpy = jest.spyOn(mockVideo, 'removeEventListener')
+
+        contentScript.stopAdSkip()
+
+        expect(removeEventSpy).toHaveBeenCalledWith('timeupdate', expect.any(Function))
       })
 
       test('should restore video to normal playback', () => {

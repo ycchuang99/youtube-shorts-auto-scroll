@@ -173,6 +173,7 @@
   }
 
   let pageObserver = null;
+  const adSkipVideoListeners = new WeakMap();
 
   function setupPageObserver() {
     if (pageObserver) {
@@ -346,6 +347,38 @@
 
   let adObserver = null;
 
+  function getAdSkipTimeupdateHandler(video) {
+    let handler = adSkipVideoListeners.get(video);
+    if (!handler) {
+      handler = () => {
+        if (isAdPlaying() && autoSkipAds) {
+          handleAd();
+        }
+      };
+      adSkipVideoListeners.set(video, handler);
+    }
+    return handler;
+  }
+
+  function attachAdSkipVideoListeners() {
+    const videoElements = document.querySelectorAll('video');
+    videoElements.forEach(video => {
+      const handler = getAdSkipTimeupdateHandler(video);
+      video.removeEventListener('timeupdate', handler);
+      video.addEventListener('timeupdate', handler);
+    });
+  }
+
+  function detachAdSkipVideoListeners() {
+    const videoElements = document.querySelectorAll('video');
+    videoElements.forEach(video => {
+      const handler = adSkipVideoListeners.get(video);
+      if (handler) {
+        video.removeEventListener('timeupdate', handler);
+      }
+    });
+  }
+
   function initAdSkip() {
     if (!autoSkipAds) {
       return;
@@ -373,14 +406,7 @@
       });
     }
     
-    const videoElements = document.querySelectorAll('video');
-    videoElements.forEach(video => {
-      video.addEventListener('timeupdate', () => {
-        if (isAdPlaying() && autoSkipAds) {
-          handleAd();
-        }
-      });
-    });
+    attachAdSkipVideoListeners();
   }
 
   function stopAdSkip() {
@@ -393,6 +419,8 @@
       adObserver.disconnect();
       adObserver = null;
     }
+
+    detachAdSkipVideoListeners();
     
     const video = document.querySelector('video');
     if (video) {
@@ -425,7 +453,9 @@
       tryClickSkipButton,
       handleAd,
       initAdSkip,
-      stopAdSkip
+      stopAdSkip,
+      attachAdSkipVideoListeners,
+      detachAdSkipVideoListeners
     };
   }
 
