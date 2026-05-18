@@ -3,6 +3,7 @@
   "version": "1.2.0",
   "description": "Auto-scroll to next Shorts video and skip ads automatically",
   "scripts": {
+    "clean": "node -e \"require('fs').rmSync('youtube-shorts-auto-scroll.zip', { force: true })\"",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
