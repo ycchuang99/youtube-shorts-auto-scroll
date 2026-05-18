@@ -12,30 +12,47 @@
       </div>
       <h1>Shorts Auto Scroll</h1>
     </div>
-    
-    <div class="card">
-      <div class="card-info">
-        <div class="card-title">Auto Scroll</div>
-        <div class="card-subtitle">Enable auto-scroll for YouTube Shorts</div>
+
+    <div class="controls-grid">
+      <div class="card toggle-card">
+        <div class="card-info">
+          <div class="card-title">Auto Scroll</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggleButton">
+          <span class="slider"></span>
+        </label>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="toggleButton">
-        <span class="slider"></span>
-      </label>
+
+      <div class="card toggle-card">
+        <div class="card-info">
+          <div class="card-title">Skip Ads</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="adSkipToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-info">
-        <div class="card-title">Auto-skip Ads</div>
-        <div class="card-subtitle">Automatically skip video ads</div>
+    <div class="card speed-card">
+      <div class="speed-card-header">
+        <div class="card-info">
+          <div class="card-title">Playback Speed</div>
+        </div>
+        <div class="speed-value" id="playbackSpeedValue">1x</div>
       </div>
-      <label class="switch">
-        <input type="checkbox" id="adSkipToggle">
-        <span class="slider"></span>
-      </label>
+      <div class="speed-control">
+        <div class="speed-range-shell">
+          <input type="range" id="playbackSpeedSlider" class="speed-range" min="0" max="4" step="1" value="2" aria-label="Playback speed">
+        </div>
+        <div class="speed-scale" aria-hidden="true">
+          <span>0.5x</span>
+          <span>1x</span>
+          <span>2x</span>
+        </div>
+      </div>
     </div>
-
-    <div class="status" id="status"></div>
   </div>
   <script src="popup.js"></script>
 </body>

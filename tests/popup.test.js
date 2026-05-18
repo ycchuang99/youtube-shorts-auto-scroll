@@ -13,19 +13,47 @@ describe('Popup UI', () => {
           </div>
           <h1>Shorts Auto Scroll</h1>
         </div>
-        
-        <div class="card">
-          <div class="card-info">
-            <div class="card-title">Auto Scroll</div>
-            <div class="card-subtitle">Enable auto-scroll for YouTube Shorts</div>
+
+        <div class="controls-grid">
+          <div class="card toggle-card">
+            <div class="card-info">
+              <div class="card-title">Auto Scroll</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleButton">
+              <span class="slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="toggleButton">
-            <span class="slider"></span>
-          </label>
+
+          <div class="card toggle-card">
+            <div class="card-info">
+              <div class="card-title">Skip Ads</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="adSkipToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
 
-        <div class="status" id="status"></div>
+        <div class="card speed-card">
+          <div class="speed-card-header">
+            <div class="card-info">
+              <div class="card-title">Playback Speed</div>
+            </div>
+            <div class="speed-value" id="playbackSpeedValue">1x</div>
+          </div>
+          <div class="speed-control">
+            <div class="speed-range-shell">
+              <input type="range" id="playbackSpeedSlider" class="speed-range" min="0" max="4" step="1" value="2" aria-label="Playback speed">
+            </div>
+            <div class="speed-scale" aria-hidden="true">
+              <span>0.5x</span>
+              <span>1x</span>
+              <span>2x</span>
+            </div>
+          </div>
+        </div>
       </div>
     `
     
@@ -39,9 +67,30 @@ describe('Popup UI', () => {
       expect(toggle.type).toBe('checkbox')
     })
 
-    test('should have status element', () => {
+    test('should not show a status panel', () => {
       const status = document.getElementById('status')
-      expect(status).not.toBeNull()
+      expect(status).toBeNull()
+    })
+
+    test('should have playback speed slider', () => {
+      const speedSlider = document.getElementById('playbackSpeedSlider')
+      const speedValue = document.getElementById('playbackSpeedValue')
+      const speedScaleLabels = document.querySelectorAll('.speed-scale span')
+      const speedRangeShell = document.querySelector('.speed-range-shell')
+      expect(speedSlider).not.toBeNull()
+      expect(speedSlider.type).toBe('range')
+      expect(speedSlider.min).toBe('0')
+      expect(speedSlider.max).toBe('4')
+      expect(speedSlider.step).toBe('1')
+      expect(speedValue.textContent).toBe('1x')
+      expect(speedRangeShell).not.toBeNull()
+      expect(speedScaleLabels).toHaveLength(3)
+      expect(speedScaleLabels[0].textContent).toBe('0.5x')
+      expect(speedScaleLabels[1].textContent).toBe('1x')
+      expect(speedScaleLabels[2].textContent).toBe('2x')
+
+      const speedSelect = document.getElementById('playbackSpeedSelect')
+      expect(speedSelect).toBeNull()
     })
 
     test('should have header with title', () => {
@@ -50,38 +99,11 @@ describe('Popup UI', () => {
       expect(title.textContent).toBe('Shorts Auto Scroll')
     })
 
-    test('should have card info', () => {
-      const cardTitle = document.querySelector('.card-title')
-      const cardSubtitle = document.querySelector('.card-subtitle')
-      
-      expect(cardTitle.textContent).toBe('Auto Scroll')
-      expect(cardSubtitle.textContent).toBe('Enable auto-scroll for YouTube Shorts')
-    })
-  })
+    test('should use compact control titles', () => {
+      const cardTitles = Array.from(document.querySelectorAll('.card-title')).map(node => node.textContent)
 
-  describe('Status Updates', () => {
-    test('should show enabled status when toggle is on', () => {
-      const toggle = document.getElementById('toggleButton')
-      const status = document.getElementById('status')
-      
-      toggle.checked = true
-      status.textContent = '✓ Enabled'
-      status.className = 'status status-enabled'
-      
-      expect(status.textContent).toBe('✓ Enabled')
-      expect(status.className).toContain('status-enabled')
-    })
-
-    test('should show disabled status when toggle is off', () => {
-      const toggle = document.getElementById('toggleButton')
-      const status = document.getElementById('status')
-      
-      toggle.checked = false
-      status.textContent = '○ Disabled'
-      status.className = 'status status-disabled'
-      
-      expect(status.textContent).toBe('○ Disabled')
-      expect(status.className).toContain('status-disabled')
+      expect(cardTitles).toEqual(['Auto Scroll', 'Skip Ads', 'Playback Speed'])
+      expect(document.querySelector('.card-subtitle')).toBeNull()
     })
   })
 
@@ -118,6 +140,11 @@ describe('Popup UI', () => {
       await chrome.storage.sync.set({ enabled: false })
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({ enabled: false })
     })
+
+    test('should save playback speed to chrome storage', async () => {
+      await chrome.storage.sync.set({ playbackSpeed: 1.5 })
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({ playbackSpeed: 1.5 })
+    })
   })
 
   describe('Message Sending', () => {
@@ -131,6 +158,19 @@ describe('Popup UI', () => {
       expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
         1,
         { action: 'toggleAutoScroll', enabled: true }
+      )
+    })
+
+    test('should send playback speed message to content script', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      await chrome.tabs.sendMessage(tab.id, {
+        action: 'setPlaybackSpeed',
+        playbackSpeed: 1.5
+      })
+      
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
+        1,
+        { action: 'setPlaybackSpeed', playbackSpeed: 1.5 }
       )
     })
 
@@ -150,6 +190,57 @@ describe('Popup UI', () => {
     })
   })
 
+  describe('Popup Script Integration', () => {
+    test('should load saved settings and send playback speed changes from real popup script', async () => {
+      chrome.storage.sync.get.mockResolvedValueOnce({
+        enabled: false,
+        adSkipEnabled: true,
+        playbackSpeed: 1.5
+      })
+      jest.resetModules()
+
+      require('../src/popup/popup.js')
+      document.dispatchEvent(new Event('DOMContentLoaded'))
+      await Promise.resolve()
+      await Promise.resolve()
+
+      const toggle = document.getElementById('toggleButton')
+      const adSkipToggle = document.getElementById('adSkipToggle')
+      const speedSlider = document.getElementById('playbackSpeedSlider')
+      const speedValue = document.getElementById('playbackSpeedValue')
+      expect(toggle.checked).toBe(false)
+      expect(adSkipToggle.checked).toBe(true)
+      expect(speedSlider.value).toBe('3')
+      expect(speedValue.textContent).toBe('1.5x')
+
+      speedSlider.value = '1'
+      speedSlider.dispatchEvent(new Event('input'))
+      expect(speedValue.textContent).toBe('0.75x')
+
+      speedSlider.value = '4'
+      speedSlider.dispatchEvent(new Event('change'))
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({ playbackSpeed: 2 })
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, {
+        action: 'setPlaybackSpeed',
+        playbackSpeed: 2
+      })
+
+      adSkipToggle.checked = false
+      adSkipToggle.dispatchEvent(new Event('change'))
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({ adSkipEnabled: false })
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, {
+        action: 'toggleAdSkip',
+        enabled: false
+      })
+    })
+  })
+
   describe('Accessibility', () => {
     test('should have proper ARIA labels on switch', () => {
       const toggle = document.getElementById('toggleButton')
@@ -160,26 +251,8 @@ describe('Popup UI', () => {
     })
 
     test('should have descriptive text for screen readers', () => {
-      const cardSubtitle = document.querySelector('.card-subtitle')
-      expect(cardSubtitle.textContent).toContain('Enable auto-scroll')
-    })
-  })
-
-  describe('Visual States', () => {
-    test('should apply correct CSS classes for enabled state', () => {
-      const status = document.getElementById('status')
-      status.className = 'status status-enabled'
-      
-      expect(status.classList.contains('status')).toBe(true)
-      expect(status.classList.contains('status-enabled')).toBe(true)
-    })
-
-    test('should apply correct CSS classes for disabled state', () => {
-      const status = document.getElementById('status')
-      status.className = 'status status-disabled'
-      
-      expect(status.classList.contains('status')).toBe(true)
-      expect(status.classList.contains('status-disabled')).toBe(true)
+      const speedSlider = document.getElementById('playbackSpeedSlider')
+      expect(speedSlider.getAttribute('aria-label')).toBe('Playback speed')
     })
   })
 })
