@@ -3,7 +3,7 @@ global.chrome = {
   storage: {
     sync: {
       get: jest.fn((keys, callback) => {
-        const result = { enabled: true }
+        const result = { enabled: true, adSkipEnabled: true, playbackSpeed: 1.0 }
         if (callback) callback(result)
         return Promise.resolve(result)
       }),
