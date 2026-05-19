@@ -1,4 +1,7 @@
 // Mock Chrome APIs
+global.__chromeRuntimeMessageListener = null
+global.__chromeRuntimeMessageListeners = []
+
 global.chrome = {
   storage: {
     sync: {
@@ -15,7 +18,10 @@ global.chrome = {
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn((listener) => {
+        global.__chromeRuntimeMessageListener = listener
+        global.__chromeRuntimeMessageListeners.push(listener)
+      })
     }
   },
   tabs: {

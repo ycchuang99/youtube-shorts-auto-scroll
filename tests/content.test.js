@@ -4,6 +4,13 @@
 
 const contentScript = require('../src/content.js')
 
+function loadFreshContentScript() {
+  jest.resetModules()
+  global.__chromeRuntimeMessageListener = null
+  global.__chromeRuntimeMessageListeners = []
+  return require('../src/content.js')
+}
+
 describe('Content Script - YouTube Shorts Auto Scroll', () => {
   let mockVideo
   let mockNextButton
@@ -258,6 +265,26 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       
       expect(removeEventSpy).toHaveBeenCalledWith('ended', expect.any(Function))
       expect(removeEventSpy).toHaveBeenCalledWith('timeupdate', expect.any(Function))
+    })
+
+    test('should scroll when the attached ended listener fires', () => {
+      const clickSpy = jest.spyOn(mockNextButton, 'click')
+
+      contentScript.handleVideoEnd()
+      mockVideo.dispatchEvent(new Event('ended'))
+
+      expect(clickSpy).toHaveBeenCalled()
+    })
+
+    test('should scroll when the attached timeupdate listener reaches the end', () => {
+      const clickSpy = jest.spyOn(mockNextButton, 'click')
+
+      contentScript.handleVideoEnd()
+      mockVideo.currentTime = 29.8
+      mockVideo.duration = 30
+      mockVideo.dispatchEvent(new Event('timeupdate'))
+
+      expect(clickSpy).toHaveBeenCalled()
     })
   })
 
@@ -1400,6 +1427,208 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         expect(mockVideo.playbackRate).toBe(1.75)
         expect(mockVideo.muted).toBe(true)
         expect(mockVideo.paused).toBe(false)
+      })
+    })
+
+    describe('browser wiring integration', () => {
+      let freshContentScript
+      let integrationVideo
+      let integrationNextButton
+      let navigateFinishHandler
+      let visibilityChangeHandler
+
+      beforeEach(() => {
+        document.body.innerHTML = ''
+        jest.clearAllMocks()
+        global.__chromeRuntimeMessageListener = null
+        global.__chromeRuntimeMessageListeners = []
+
+        integrationVideo = document.createElement('video')
+        Object.defineProperty(integrationVideo, 'duration', {
+          writable: true,
+          value: 30
+        })
+        Object.defineProperty(integrationVideo, 'currentTime', {
+          writable: true,
+          value: 0
+        })
+        Object.defineProperty(integrationVideo, 'paused', {
+          writable: true,
+          value: false
+        })
+        Object.defineProperty(integrationVideo, 'ended', {
+          writable: true,
+          value: false
+        })
+        Object.defineProperty(integrationVideo, 'readyState', {
+          writable: true,
+          value: 4
+        })
+        Object.defineProperty(integrationVideo, 'muted', {
+          configurable: true,
+          writable: true,
+          value: false
+        })
+
+        integrationNextButton = document.createElement('button')
+        integrationNextButton.setAttribute('aria-label', 'Next video')
+
+        const reel = document.createElement('ytd-reel-video-renderer')
+        reel.setAttribute('is-active', '')
+        reel.appendChild(integrationVideo)
+
+        document.body.appendChild(integrationNextButton)
+        document.body.appendChild(reel)
+
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: false
+        })
+
+        chrome.storage.sync.get.mockImplementation((keys, callback) => {
+          const result = {
+            enabled: true,
+            adSkipEnabled: false,
+            playbackSpeed: 1.25
+          }
+
+          if (callback) {
+            callback(result)
+          }
+
+          return Promise.resolve(result)
+        })
+
+        const originalWindowAddEventListener = window.addEventListener.bind(window)
+        const originalDocumentAddEventListener = document.addEventListener.bind(document)
+
+        const windowAddEventSpy = jest.spyOn(window, 'addEventListener').mockImplementation((eventName, handler, options) => {
+          if (eventName === 'yt-navigate-finish') {
+            navigateFinishHandler = handler
+          }
+
+          return originalWindowAddEventListener(eventName, handler, options)
+        })
+
+        const documentAddEventSpy = jest.spyOn(document, 'addEventListener').mockImplementation((eventName, handler, options) => {
+          if (eventName === 'visibilitychange') {
+            visibilityChangeHandler = handler
+          }
+
+          return originalDocumentAddEventListener(eventName, handler, options)
+        })
+
+        window.history.pushState({}, '', '/shorts/runtime-test')
+        freshContentScript = loadFreshContentScript()
+
+        windowAddEventSpy.mockRestore()
+        documentAddEventSpy.mockRestore()
+      })
+
+      afterEach(() => {
+        if (window.adSkipInterval) {
+          clearInterval(window.adSkipInterval)
+          window.adSkipInterval = null
+        }
+      })
+
+      test('should bootstrap from storage using expected keys', () => {
+        expect(chrome.storage.sync.get).toHaveBeenCalledWith(
+          ['enabled', 'adSkipEnabled', 'playbackSpeed'],
+          expect.any(Function)
+        )
+        expect(freshContentScript.getEnabled()).toBe(true)
+        expect(freshContentScript.getPlaybackSpeed()).toBe(1.25)
+        expect(integrationVideo.playbackRate).toBe(1.25)
+      })
+
+      test('should register a runtime message listener during bootstrap', () => {
+        expect(chrome.runtime.onMessage.addListener).toHaveBeenCalledWith(expect.any(Function))
+        expect(typeof global.__chromeRuntimeMessageListener).toBe('function')
+      })
+
+      test('should disable auto-scroll through runtime messages', () => {
+        const runtimeListener = global.__chromeRuntimeMessageListener
+        const addEventSpy = jest.spyOn(integrationVideo, 'addEventListener')
+
+        runtimeListener({ action: 'toggleAutoScroll', enabled: false }, {}, jest.fn())
+        freshContentScript.handleVideoEnd()
+
+        expect(freshContentScript.getEnabled()).toBe(false)
+        expect(addEventSpy).not.toHaveBeenCalled()
+      })
+
+      test('should re-enable auto-scroll and initialize handlers through runtime messages', () => {
+        const runtimeListener = global.__chromeRuntimeMessageListener
+        const addEventSpy = jest.spyOn(integrationVideo, 'addEventListener')
+
+        runtimeListener({ action: 'toggleAutoScroll', enabled: false }, {}, jest.fn())
+        runtimeListener({ action: 'toggleAutoScroll', enabled: true }, {}, jest.fn())
+
+        expect(freshContentScript.getEnabled()).toBe(true)
+        expect(addEventSpy).toHaveBeenCalledWith('ended', expect.any(Function))
+        expect(addEventSpy).toHaveBeenCalledWith('timeupdate', expect.any(Function))
+      })
+
+      test('should start ad-skip when enabled through runtime messages', () => {
+        const runtimeListener = global.__chromeRuntimeMessageListener
+
+        runtimeListener({ action: 'toggleAdSkip', enabled: true }, {}, jest.fn())
+
+        expect(window.adSkipInterval).toBeDefined()
+      })
+
+      test('should stop ad-skip when disabled through runtime messages', () => {
+        const runtimeListener = global.__chromeRuntimeMessageListener
+
+        runtimeListener({ action: 'toggleAdSkip', enabled: true }, {}, jest.fn())
+        expect(window.adSkipInterval).toBeDefined()
+
+        runtimeListener({ action: 'toggleAdSkip', enabled: false }, {}, jest.fn())
+
+        expect(window.adSkipInterval).toBeNull()
+      })
+
+      test('should apply playback speed changes from runtime messages', () => {
+        const runtimeListener = global.__chromeRuntimeMessageListener
+        integrationVideo.playbackRate = 1
+
+        runtimeListener({ action: 'setPlaybackSpeed', playbackSpeed: 2 }, {}, jest.fn())
+
+        expect(freshContentScript.getPlaybackSpeed()).toBe(2)
+        expect(integrationVideo.playbackRate).toBe(2)
+      })
+
+      test('should reinitialize on YouTube SPA navigation', () => {
+        integrationVideo.playbackRate = 1
+
+        navigateFinishHandler()
+
+        expect(integrationVideo.playbackRate).toBe(1.25)
+      })
+
+      test('should reinitialize on visibility change when visible and enabled', () => {
+        integrationVideo.playbackRate = 1
+
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: false
+        })
+        visibilityChangeHandler()
+
+        expect(integrationVideo.playbackRate).toBe(1.25)
+      })
+
+      test('should not reinitialize on visibility change when hidden', () => {
+        integrationVideo.playbackRate = 1
+
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: true
+        })
+        visibilityChangeHandler()
+
+        expect(integrationVideo.playbackRate).toBe(1)
       })
     })
   })

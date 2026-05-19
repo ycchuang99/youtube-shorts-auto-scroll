@@ -2,7 +2,6 @@ module.exports = {
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
     'src/**/*.js',
-    '!src/popup/popup.js',
     '!**/*.test.js'
   ],
   coverageDirectory: 'coverage',
