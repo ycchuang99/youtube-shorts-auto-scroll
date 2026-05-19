@@ -114,6 +114,29 @@
     return isShortsPage() ? playbackSpeed : 1.0;
   }
 
+  function canRestoreAudio() {
+    const activation =
+      (typeof navigator !== 'undefined' && navigator.userActivation) ||
+      (typeof document !== 'undefined' && document.userActivation) ||
+      null;
+
+    if (!activation) {
+      return true;
+    }
+
+    return activation.hasBeenActive || activation.isActive;
+  }
+
+  function restoreVideoAfterAd(video, restoredPlaybackSpeed) {
+    if (video.playbackRate !== restoredPlaybackSpeed) {
+      video.playbackRate = restoredPlaybackSpeed;
+    }
+
+    if (video.muted && canRestoreAudio()) {
+      video.muted = false;
+    }
+  }
+
   function handleVideoEnd() {
     if (!isEnabled || !isShortsPage()) return;
 
@@ -335,12 +358,7 @@
       
       const restoredPlaybackSpeed = getRestoredPlaybackSpeed();
       videos.forEach((video, index) => {
-        if (video.playbackRate !== restoredPlaybackSpeed) {
-          video.playbackRate = restoredPlaybackSpeed;
-        }
-        if (video.muted) {
-          video.muted = false;
-        }
+        restoreVideoAfterAd(video, restoredPlaybackSpeed);
       });
     }
   }
@@ -424,8 +442,7 @@
     
     const video = document.querySelector('video');
     if (video) {
-      video.playbackRate = getRestoredPlaybackSpeed();
-      video.muted = false;
+      restoreVideoAfterAd(video, getRestoredPlaybackSpeed());
     }
   }
 

@@ -793,6 +793,7 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
       
       mockVideo = document.createElement('video')
       Object.defineProperty(mockVideo, 'muted', {
+        configurable: true,
         writable: true,
         value: false
       })
@@ -808,7 +809,17 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         writable: true,
         value: 0
       })
+      Object.defineProperty(mockVideo, 'paused', {
+        configurable: true,
+        writable: true,
+        value: false
+      })
       document.body.appendChild(mockVideo)
+
+      Object.defineProperty(window.navigator, 'userActivation', {
+        configurable: true,
+        value: undefined
+      })
       
       originalConsoleLog = console.log
       console.log = jest.fn()
@@ -1041,6 +1052,40 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
 
         expect(mockVideo.playbackRate).toBe(1.0)
         expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should not pause playback when unmute is blocked during ad recovery', () => {
+        Object.defineProperty(window.navigator, 'userActivation', {
+          configurable: true,
+          value: {
+            hasBeenActive: false,
+            isActive: false
+          }
+        })
+
+        let mutedValue = true
+        Object.defineProperty(mockVideo, 'muted', {
+          configurable: true,
+          get: () => mutedValue,
+          set: (value) => {
+            mutedValue = value
+            if (value === false) {
+              mockVideo.paused = true
+            }
+          }
+        })
+
+        mockVideo.paused = false
+        mockVideo.playbackRate = 16.0
+        contentScript.setPlaybackSpeed(1.5)
+        window.history.pushState({}, '', '/shorts/test123')
+        mockPlayer.classList.remove('ad-showing')
+
+        contentScript.handleAd()
+
+        expect(mockVideo.playbackRate).toBe(1.5)
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.paused).toBe(false)
       })
 
       test('should attempt to click skip button when ad playing', () => {
@@ -1323,6 +1368,38 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         
         expect(mockVideo.playbackRate).toBe(1.0)
         expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should not pause playback when unmute is blocked while stopping ad skip', () => {
+        Object.defineProperty(window.navigator, 'userActivation', {
+          configurable: true,
+          value: {
+            hasBeenActive: false,
+            isActive: false
+          }
+        })
+
+        let mutedValue = true
+        Object.defineProperty(mockVideo, 'muted', {
+          configurable: true,
+          get: () => mutedValue,
+          set: (value) => {
+            mutedValue = value
+            if (value === false) {
+              mockVideo.paused = true
+            }
+          }
+        })
+
+        window.history.pushState({}, '', '/shorts/test123')
+        contentScript.setPlaybackSpeed(1.75)
+        mockVideo.paused = false
+
+        contentScript.stopAdSkip()
+
+        expect(mockVideo.playbackRate).toBe(1.75)
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.paused).toBe(false)
       })
     })
   })
