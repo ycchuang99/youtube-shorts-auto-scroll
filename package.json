@@ -8,7 +8,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "build": "npm run clean && npm run package",
-    "package": "zip -r youtube-shorts-auto-scroll.zip manifest.json src/ assets/ -x '*.DS_Store'"
+    "package": "zip -r youtube-shorts-auto-scroll.zip manifest.json src/ assets/ -x '*.DS_Store' -x 'assets/images/demo.png'"
   },
   "repository": {
     "type": "git",
