@@ -132,9 +132,13 @@
       video.playbackRate = restoredPlaybackSpeed;
     }
 
-    if (video.muted && canRestoreAudio()) {
+    const state = adSkipVideoStates.get(video);
+    const preferredMuted = state?.latestUserMutedChoice ?? state?.originalMuted;
+    if (state && preferredMuted === false && video.muted && canRestoreAudio()) {
       video.muted = false;
     }
+
+    adSkipVideoStates.delete(video);
   }
 
   function handleVideoEnd() {
@@ -197,6 +201,28 @@
 
   let pageObserver = null;
   const adSkipVideoListeners = new WeakMap();
+  const adSkipVolumeChangeListeners = new WeakMap();
+  const adSkipVideoStates = new Map();
+
+  function rememberVideoState(video) {
+    if (!adSkipVideoStates.has(video)) {
+      adSkipVideoStates.set(video, {
+        originalMuted: video.muted,
+        extensionMuted: false,
+        latestUserMutedChoice: null,
+        suppressNextMuteObservation: false
+      });
+    }
+
+    return adSkipVideoStates.get(video);
+  }
+
+  function restoreTrackedVideos(restoredPlaybackSpeed, videos) {
+    const targetVideos = videos || Array.from(document.querySelectorAll('video'));
+    targetVideos.forEach((video) => {
+      restoreVideoAfterAd(video, restoredPlaybackSpeed);
+    });
+  }
 
   function setupPageObserver() {
     if (pageObserver) {
@@ -340,7 +366,12 @@
         // Regular video ads - speed up, mute, and try to skip
         videos.forEach((video, index) => {
           try {
-            video.muted = true;
+            const state = rememberVideoState(video);
+            if (!video.muted) {
+              state.suppressNextMuteObservation = true;
+              video.muted = true;
+              state.extensionMuted = true;
+            }
             video.playbackRate = 16.0;
             
             if (video.duration && !isNaN(video.duration) && video.duration > 0) {
@@ -357,9 +388,7 @@
       lastSkippedAdElement = null;
       
       const restoredPlaybackSpeed = getRestoredPlaybackSpeed();
-      videos.forEach((video, index) => {
-        restoreVideoAfterAd(video, restoredPlaybackSpeed);
-      });
+      restoreTrackedVideos(restoredPlaybackSpeed, Array.from(videos));
     }
   }
 
@@ -378,21 +407,52 @@
     return handler;
   }
 
+  function getAdSkipVolumeChangeHandler(video) {
+    let handler = adSkipVolumeChangeListeners.get(video);
+    if (!handler) {
+      handler = () => {
+        const state = adSkipVideoStates.get(video);
+        if (!state) {
+          return;
+        }
+
+        if (state.suppressNextMuteObservation) {
+          state.suppressNextMuteObservation = false;
+          return;
+        }
+
+        if (isAdPlaying() && autoSkipAds) {
+          state.latestUserMutedChoice = video.muted;
+          state.extensionMuted = false;
+        }
+      };
+      adSkipVolumeChangeListeners.set(video, handler);
+    }
+    return handler;
+  }
+
   function attachAdSkipVideoListeners() {
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach(video => {
-      const handler = getAdSkipTimeupdateHandler(video);
-      video.removeEventListener('timeupdate', handler);
-      video.addEventListener('timeupdate', handler);
+      const timeupdateHandler = getAdSkipTimeupdateHandler(video);
+      const volumechangeHandler = getAdSkipVolumeChangeHandler(video);
+      video.removeEventListener('timeupdate', timeupdateHandler);
+      video.addEventListener('timeupdate', timeupdateHandler);
+      video.removeEventListener('volumechange', volumechangeHandler);
+      video.addEventListener('volumechange', volumechangeHandler);
     });
   }
 
   function detachAdSkipVideoListeners() {
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach(video => {
-      const handler = adSkipVideoListeners.get(video);
-      if (handler) {
-        video.removeEventListener('timeupdate', handler);
+      const timeupdateHandler = adSkipVideoListeners.get(video);
+      const volumechangeHandler = adSkipVolumeChangeListeners.get(video);
+      if (timeupdateHandler) {
+        video.removeEventListener('timeupdate', timeupdateHandler);
+      }
+      if (volumechangeHandler) {
+        video.removeEventListener('volumechange', volumechangeHandler);
       }
     });
   }
@@ -439,11 +499,8 @@
     }
 
     detachAdSkipVideoListeners();
-    
-    const video = document.querySelector('video');
-    if (video) {
-      restoreVideoAfterAd(video, getRestoredPlaybackSpeed());
-    }
+
+    restoreTrackedVideos(getRestoredPlaybackSpeed());
   }
 
   // Export for testing (only in test environment)

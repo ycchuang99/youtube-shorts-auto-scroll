@@ -1055,7 +1055,7 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         expect(mockVideo.currentTime).toBeGreaterThan(29)
       })
 
-      test('should restore playback when ad is not playing', () => {
+      test('should restore playback and unmute only videos the extension muted', () => {
         mockVideo.muted = true
         mockVideo.playbackRate = 16.0
         contentScript.setPlaybackSpeed(1.5)
@@ -1065,13 +1065,12 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         contentScript.handleAd()
         
         expect(mockVideo.playbackRate).toBe(1.5)
-        expect(mockVideo.muted).toBe(false)
+        expect(mockVideo.muted).toBe(true)
       })
 
-      test('should restore non-Shorts video playback to normal speed', () => {
+      test('should restore non-Shorts video playback to normal speed without changing user mute state', () => {
         window.history.pushState({}, '', '/watch?v=abc')
-        mockVideo.muted = true
-        mockVideo.playbackRate = 16.0
+        contentScript.handleAd()
         contentScript.setPlaybackSpeed(1.5)
         mockPlayer.classList.remove('ad-showing')
 
@@ -1079,6 +1078,84 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
 
         expect(mockVideo.playbackRate).toBe(1.0)
         expect(mockVideo.muted).toBe(false)
+      })
+
+      test('should restore user-muted and extension-muted videos to their original mute states', () => {
+        const video2 = document.createElement('video')
+        Object.defineProperty(video2, 'muted', {
+          writable: true,
+          value: true
+        })
+        Object.defineProperty(video2, 'playbackRate', {
+          writable: true,
+          value: 1.0
+        })
+        Object.defineProperty(video2, 'duration', {
+          writable: true,
+          value: 15
+        })
+        Object.defineProperty(video2, 'currentTime', {
+          writable: true,
+          value: 0
+        })
+        document.body.appendChild(video2)
+
+        contentScript.handleAd()
+
+        expect(mockVideo.muted).toBe(true)
+        expect(video2.muted).toBe(true)
+
+        mockPlayer.classList.remove('ad-showing')
+        contentScript.setPlaybackSpeed(1.5)
+        window.history.pushState({}, '', '/shorts/test123')
+
+        contentScript.handleAd()
+
+        expect(mockVideo.muted).toBe(false)
+        expect(video2.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(1.5)
+        expect(video2.playbackRate).toBe(1.5)
+      })
+
+      test('should honor a user unmute that happens during the ad', () => {
+        mockVideo.muted = true
+        contentScript.attachAdSkipVideoListeners()
+
+        contentScript.handleAd()
+
+        mockVideo.muted = false
+        mockVideo.dispatchEvent(new Event('volumechange'))
+        contentScript.handleAd()
+
+        mockPlayer.classList.remove('ad-showing')
+        contentScript.setPlaybackSpeed(1.5)
+        window.history.pushState({}, '', '/shorts/test123')
+
+        contentScript.handleAd()
+
+        expect(mockVideo.muted).toBe(false)
+        expect(mockVideo.playbackRate).toBe(1.5)
+      })
+
+      test('should honor the latest user mute choice during the ad', () => {
+        contentScript.attachAdSkipVideoListeners()
+        contentScript.handleAd()
+
+        mockVideo.muted = false
+        mockVideo.dispatchEvent(new Event('volumechange'))
+        contentScript.handleAd()
+        mockVideo.dispatchEvent(new Event('volumechange'))
+        mockVideo.muted = true
+        mockVideo.dispatchEvent(new Event('volumechange'))
+
+        mockPlayer.classList.remove('ad-showing')
+        contentScript.setPlaybackSpeed(1.5)
+        window.history.pushState({}, '', '/shorts/test123')
+
+        contentScript.handleAd()
+
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(1.5)
       })
 
       test('should not pause playback when unmute is blocked during ad recovery', () => {
@@ -1324,7 +1401,7 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         expect(() => contentScript.initAdSkip()).not.toThrow()
       })
 
-      test('should not stack duplicate timeupdate listeners on repeated init', () => {
+      test('should not stack duplicate timeupdate or volumechange listeners on repeated init', () => {
         const addEventSpy = jest.spyOn(mockVideo, 'addEventListener')
         const removeEventSpy = jest.spyOn(mockVideo, 'removeEventListener')
 
@@ -1333,12 +1410,19 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
 
         const addTimeupdateCalls = addEventSpy.mock.calls.filter(([eventName]) => eventName === 'timeupdate')
         const removeTimeupdateCalls = removeEventSpy.mock.calls.filter(([eventName]) => eventName === 'timeupdate')
+        const addVolumechangeCalls = addEventSpy.mock.calls.filter(([eventName]) => eventName === 'volumechange')
+        const removeVolumechangeCalls = removeEventSpy.mock.calls.filter(([eventName]) => eventName === 'volumechange')
 
         expect(addTimeupdateCalls).toHaveLength(2)
         expect(removeTimeupdateCalls).toHaveLength(2)
         expect(addTimeupdateCalls[0][1]).toBe(addTimeupdateCalls[1][1])
         expect(removeTimeupdateCalls[0][1]).toBe(addTimeupdateCalls[0][1])
         expect(removeTimeupdateCalls[1][1]).toBe(addTimeupdateCalls[1][1])
+        expect(addVolumechangeCalls).toHaveLength(2)
+        expect(removeVolumechangeCalls).toHaveLength(2)
+        expect(addVolumechangeCalls[0][1]).toBe(addVolumechangeCalls[1][1])
+        expect(removeVolumechangeCalls[0][1]).toBe(addVolumechangeCalls[0][1])
+        expect(removeVolumechangeCalls[1][1]).toBe(addVolumechangeCalls[1][1])
       })
 
       test('should log when ad skip is disabled', () => {
@@ -1375,26 +1459,80 @@ describe('Content Script - YouTube Shorts Auto Scroll', () => {
         contentScript.stopAdSkip()
 
         expect(removeEventSpy).toHaveBeenCalledWith('timeupdate', expect.any(Function))
+        expect(removeEventSpy).toHaveBeenCalledWith('volumechange', expect.any(Function))
       })
 
-      test('should restore video to normal playback', () => {
+      test('should restore video to normal playback without unmuting the user', () => {
         window.history.pushState({}, '', '/shorts/test123')
         contentScript.setPlaybackSpeed(1.75)
 
         contentScript.stopAdSkip()
         
         expect(mockVideo.playbackRate).toBe(1.75)
-        expect(mockVideo.muted).toBe(false)
+        expect(mockVideo.muted).toBe(true)
       })
 
-      test('should restore non-Shorts video to normal playback', () => {
+      test('should preserve user mute state for non-Shorts video when stopping ad skip', () => {
         window.history.pushState({}, '', '/watch?v=abc')
         contentScript.setPlaybackSpeed(1.75)
 
         contentScript.stopAdSkip()
         
         expect(mockVideo.playbackRate).toBe(1.0)
+        expect(mockVideo.muted).toBe(true)
+      })
+
+      test('should restore all tracked videos to their original mute states when stopping ad skip', () => {
+        const video2 = document.createElement('video')
+        Object.defineProperty(video2, 'muted', {
+          writable: true,
+          value: true
+        })
+        Object.defineProperty(video2, 'playbackRate', {
+          writable: true,
+          value: 1.0
+        })
+        Object.defineProperty(video2, 'duration', {
+          writable: true,
+          value: 15
+        })
+        Object.defineProperty(video2, 'currentTime', {
+          writable: true,
+          value: 0
+        })
+        document.body.appendChild(video2)
+
+        mockVideo.muted = false
+        contentScript.handleAd()
+        window.history.pushState({}, '', '/shorts/test123')
+        contentScript.setPlaybackSpeed(1.75)
+
+        contentScript.stopAdSkip()
+
         expect(mockVideo.muted).toBe(false)
+        expect(video2.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(1.75)
+        expect(video2.playbackRate).toBe(1.75)
+      })
+
+      test('should honor the latest user mute choice when stopping ad skip mid-ad', () => {
+        mockVideo.muted = false
+        contentScript.handleAd()
+
+        mockVideo.muted = false
+        mockVideo.dispatchEvent(new Event('volumechange'))
+        contentScript.handleAd()
+        mockVideo.dispatchEvent(new Event('volumechange'))
+        mockVideo.muted = true
+        mockVideo.dispatchEvent(new Event('volumechange'))
+
+        window.history.pushState({}, '', '/shorts/test123')
+        contentScript.setPlaybackSpeed(1.75)
+
+        contentScript.stopAdSkip()
+
+        expect(mockVideo.muted).toBe(true)
+        expect(mockVideo.playbackRate).toBe(1.75)
       })
 
       test('should not pause playback when unmute is blocked while stopping ad skip', () => {
