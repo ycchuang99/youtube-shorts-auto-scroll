@@ -24,8 +24,8 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.268",
-    "@types/jest": "^29.5.12",
-    "jest": "^29.7.0",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.0.0",
     "jest-environment-jsdom": "^30.4.1"
   }
 }
