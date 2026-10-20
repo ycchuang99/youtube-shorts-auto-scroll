@@ -1,0 +1,32 @@
+{
+  "extensionName": {
+    "message": "YouTube Shorts 自動捲動"
+  },
+  "extensionDescription": {
+    "message": "自動捲動 YouTube Shorts、略過 Shorts 廣告卡片，並調整 Shorts 播放速度。一般影片不受影響。"
+  },
+  "popupTitle": {
+    "message": "Shorts 自動捲動"
+  },
+  "autoScroll": {
+    "message": "自動捲動"
+  },
+  "skipShortsAds": {
+    "message": "略過 Shorts 廣告"
+  },
+  "playbackSpeed": {
+    "message": "播放速度"
+  },
+  "scopeNote": {
+    "message": "僅作用於 Shorts，不影響一般影片及其廣告。"
+  },
+  "speedValue": {
+    "message": "$speed$ 倍",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "1.5"
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "extensionName": {
+    "message": "YouTube Shorts Auto Scroll"
+  },
+  "extensionDescription": {
+    "message": "Auto-scroll YouTube Shorts, skip Shorts ad cards, and adjust Shorts playback speed. Regular videos are unaffected."
+  },
+  "popupTitle": {
+    "message": "Shorts Auto Scroll"
+  },
+  "autoScroll": {
+    "message": "Auto Scroll"
+  },
+  "skipShortsAds": {
+    "message": "Skip Shorts ads"
+  },
+  "playbackSpeed": {
+    "message": "Playback Speed"
+  },
+  "scopeNote": {
+    "message": "Works only on Shorts. Regular videos and their ads are unaffected."
+  },
+  "speedValue": {
+    "message": "$speed$x",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "1.5"
+      }
+    }
+  }
+}

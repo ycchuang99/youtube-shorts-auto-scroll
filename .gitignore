@@ -8,6 +8,7 @@ yarn-error.log
 
 # Testing
 coverage/
+verification/
 *.log
 
 # Build artifacts

@@ -2,6 +2,21 @@
 
 All notable changes to the YouTube Shorts Auto Scroll extension will be documented in this file.
 
+## [1.4.0] - 2026-10-20
+
+### Fixed
+- Restricted auto-scroll, playback speed, and sponsored-card skipping to the active YouTube Shorts card.
+- Stopped Shorts timers and observers when navigating to a regular video or another YouTube page.
+- Removed regular-video ad handling, including forced muting, 16× playback, seeking to the end, and automatic skip-button clicking.
+- Kept normal auto-scroll and playback speed controls from modifying detected ads.
+
+### Changed
+- Clarified that the optional ad setting scrolls past sponsored cards in the Shorts feed.
+- Added English, Traditional Chinese, and Simplified Chinese popup and extension metadata.
+- Removed the unused `activeTab` permission; popup messages only need the current tab's ID.
+- Refreshed store descriptions, reviewer instructions, and the privacy policy to describe the Shorts-only scope and Chrome settings sync.
+- Added ESLint, checked release packaging (including translations), and a tag-triggered GitHub release workflow.
+
 ## [1.2.0] - 2026-02-14
 
 ### Added

@@ -4,7 +4,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adSkipToggle = document.getElementById('adSkipToggle')
   const playbackSpeedSlider = document.getElementById('playbackSpeedSlider')
   const playbackSpeedValue = document.getElementById('playbackSpeedValue')
-  
+
+  document.documentElement.lang = chrome.i18n.getMessage('@@ui_locale').replace(/_/g, '-') || 'en'
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    element.textContent = chrome.i18n.getMessage(element.dataset.i18n) || element.textContent
+  })
+  document.querySelectorAll('[data-speed]').forEach((element) => {
+    element.textContent = formatPlaybackSpeed(element.dataset.speed)
+  })
+
   // Load saved state
   const { enabled = true, adSkipEnabled = true, playbackSpeed = 1 } = await chrome.storage.sync.get(['enabled', 'adSkipEnabled', 'playbackSpeed'])
   toggle.checked = enabled
@@ -13,65 +21,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   updatePlaybackSpeedDisplay()
 
   // Handle auto-scroll toggle changes
-  toggle.addEventListener('change', async () => {
+  toggle.addEventListener('change', () => {
     const enabled = toggle.checked
-    
-    // Save state
-    await chrome.storage.sync.set({ enabled })
-    
-    // Notify content script (silently fail if not on YouTube)
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      await chrome.tabs.sendMessage(tab.id, { 
-        action: 'toggleAutoScroll',
-        enabled 
-      })
-    } catch (err) {
-      // Silently ignore - content script might not be loaded
-    }
+    return saveAndNotify({ enabled }, { action: 'toggleAutoScroll', enabled })
   })
 
   // Handle ad skip toggle changes
-  adSkipToggle.addEventListener('change', async () => {
+  adSkipToggle.addEventListener('change', () => {
     const enabled = adSkipToggle.checked
-    
-    // Save state
-    await chrome.storage.sync.set({ adSkipEnabled: enabled })
-    
-    // Notify content script (silently fail if not on YouTube)
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      await chrome.tabs.sendMessage(tab.id, { 
-        action: 'toggleAdSkip',
-        enabled 
-      })
-    } catch (err) {
-      // Silently ignore - content script might not be loaded
-    }
+    return saveAndNotify({ adSkipEnabled: enabled }, { action: 'toggleAdSkip', enabled })
   })
 
   // Handle playback speed changes
   playbackSpeedSlider.addEventListener('input', updatePlaybackSpeedDisplay)
 
-  playbackSpeedSlider.addEventListener('change', async () => {
+  playbackSpeedSlider.addEventListener('change', () => {
     const playbackSpeed = getPlaybackSpeedFromSliderValue(playbackSpeedSlider.value)
     playbackSpeedSlider.value = String(getPlaybackSpeedSliderIndex(playbackSpeed))
     updatePlaybackSpeedDisplay()
-    
-    // Save state
-    await chrome.storage.sync.set({ playbackSpeed })
-    
-    // Notify content script (silently fail if not on YouTube)
+    return saveAndNotify({ playbackSpeed }, { action: 'setPlaybackSpeed', playbackSpeed })
+  })
+
+  async function saveAndNotify(settings, message) {
+    await chrome.storage.sync.set(settings)
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-      await chrome.tabs.sendMessage(tab.id, {
-        action: 'setPlaybackSpeed',
-        playbackSpeed
-      })
+      if (tab?.id != null) await chrome.tabs.sendMessage(tab.id, message)
     } catch (err) {
       // Silently ignore - content script might not be loaded
     }
-  })
+  }
 
   function normalizePopupPlaybackSpeed(value) {
     const speed = Number(value)
@@ -98,10 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function formatPlaybackSpeed(value) {
-    return `${Number(value).toFixed(2).replace(/\.00$/, '').replace(/0$/, '')}x`
+    return chrome.i18n.getMessage('speedValue', String(value)) || `${value}x`
   }
 
   function updatePlaybackSpeedDisplay() {
     playbackSpeedValue.textContent = formatPlaybackSpeed(getPlaybackSpeedFromSliderValue(playbackSpeedSlider.value))
+    playbackSpeedSlider.setAttribute('aria-valuetext', playbackSpeedValue.textContent)
   }
 })

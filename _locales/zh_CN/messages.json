@@ -1,0 +1,32 @@
+{
+  "extensionName": {
+    "message": "YouTube Shorts 自动滚动"
+  },
+  "extensionDescription": {
+    "message": "自动滚动 YouTube Shorts、跳过 Shorts 广告卡片，并调整 Shorts 播放速度。普通视频不受影响。"
+  },
+  "popupTitle": {
+    "message": "Shorts 自动滚动"
+  },
+  "autoScroll": {
+    "message": "自动滚动"
+  },
+  "skipShortsAds": {
+    "message": "跳过 Shorts 广告"
+  },
+  "playbackSpeed": {
+    "message": "播放速度"
+  },
+  "scopeNote": {
+    "message": "仅作用于 Shorts，不影响普通视频及其广告。"
+  },
+  "speedValue": {
+    "message": "$speed$ 倍",
+    "placeholders": {
+      "speed": {
+        "content": "$1",
+        "example": "1.5"
+      }
+    }
+  }
+}

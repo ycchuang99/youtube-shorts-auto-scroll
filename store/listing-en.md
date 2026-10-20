@@ -1,0 +1,42 @@
+# English store listing
+
+## Name
+
+YouTube Shorts Auto Scroll
+
+## Short description
+
+Automatically advance YouTube Shorts, adjust playback speed, and optionally scroll past sponsored cards in the Shorts feed.
+
+## Detailed description
+
+Keep watching YouTube Shorts without scrolling after every video.
+
+YouTube Shorts Auto Scroll advances to the next Short when the current one finishes. Open the extension popup to turn automatic scrolling on or off and choose a comfortable playback speed.
+
+Features:
+• Automatically advance after the current Short ends.
+• Choose 0.5×, 0.75×, 1×, 1.5×, or 2× playback for Shorts.
+• Optionally scroll past detected sponsored cards in the Shorts feed.
+• Control automatic scrolling and sponsored-card skipping independently.
+• Use the popup in English, Traditional Chinese, or Simplified Chinese.
+• Save preferences with Chrome settings sync.
+
+Built for Shorts
+Player actions are limited to the active Shorts card. Regular YouTube videos are outside the feature scope. The extension remains available as you navigate between YouTube pages and starts or stops its Shorts features as needed.
+
+About sponsored cards
+The optional setting moves to the next Shorts card when a sponsored card is detected. It does not intercept network requests, mute ads, speed up ads, or seek through ads. Detection depends on YouTube's page structure, so not every sponsored card may be detected. This extension does not guarantee ad-free playback or bypass YouTube's playback restrictions.
+
+Privacy
+No analytics, external telemetry, or publisher-operated data collection. Preferences use Chrome's built-in sync storage and may sync through your Google account when browser sync is enabled. No separate account is required.
+
+After updating, reload open YouTube tabs so the latest version can take effect.
+
+Independent project; not affiliated with or endorsed by YouTube or Google.
+
+## Links
+
+- Homepage: https://github.com/ycchuang99/youtube-shorts-auto-scroll
+- Support: https://github.com/ycchuang99/youtube-shorts-auto-scroll/issues
+- Privacy policy: https://github.com/ycchuang99/youtube-shorts-auto-scroll/blob/main/docs/privacy-policy.md

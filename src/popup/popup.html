@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title data-i18n="extensionName">YouTube Shorts Auto Scroll</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div class="logo-icon-wrapper">
-        <img src="../../assets/images/scroll-icon-128.png" alt="Logo" class="logo-icon">
+        <img src="../../assets/images/scroll-icon-128.png" alt="" class="logo-icon">
       </div>
-      <h1>Shorts Auto Scroll</h1>
+      <h1 data-i18n="popupTitle">Shorts Auto Scroll</h1>
     </div>
 
     <div class="controls-grid">
       <div class="card toggle-card">
         <div class="card-info">
-          <div class="card-title">Auto Scroll</div>
+          <div class="card-title" id="autoScrollLabel" data-i18n="autoScroll">Auto Scroll</div>
         </div>
         <label class="switch">
-          <input type="checkbox" id="toggleButton">
+          <input type="checkbox" id="toggleButton" aria-labelledby="autoScrollLabel">
           <span class="slider"></span>
         </label>
       </div>
 
       <div class="card toggle-card">
         <div class="card-info">
-          <div class="card-title">Skip Ads</div>
+          <div class="card-title" id="adSkipLabel" data-i18n="skipShortsAds">Skip Shorts ads</div>
         </div>
         <label class="switch">
-          <input type="checkbox" id="adSkipToggle">
+          <input type="checkbox" id="adSkipToggle" aria-labelledby="adSkipLabel">
           <span class="slider"></span>
         </label>
       </div>
@@ -38,21 +39,22 @@
     <div class="card speed-card">
       <div class="speed-card-header">
         <div class="card-info">
-          <div class="card-title">Playback Speed</div>
+          <div class="card-title" id="playbackSpeedLabel" data-i18n="playbackSpeed">Playback Speed</div>
         </div>
         <div class="speed-value" id="playbackSpeedValue">1x</div>
       </div>
       <div class="speed-control">
         <div class="speed-range-shell">
-          <input type="range" id="playbackSpeedSlider" class="speed-range" min="0" max="4" step="1" value="2" aria-label="Playback speed">
+          <input type="range" id="playbackSpeedSlider" class="speed-range" min="0" max="4" step="1" value="2" aria-labelledby="playbackSpeedLabel">
         </div>
         <div class="speed-scale" aria-hidden="true">
-          <span>0.5x</span>
-          <span>1x</span>
-          <span>2x</span>
+          <span data-speed="0.5">0.5x</span>
+          <span data-speed="1">1x</span>
+          <span data-speed="2">2x</span>
         </div>
       </div>
     </div>
+    <p class="scope-note" data-i18n="scopeNote">Works only on Shorts. Regular videos and their ads are unaffected.</p>
   </div>
   <script src="popup.js"></script>
 </body>

@@ -107,6 +107,7 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
   }
 
   .card-title {
@@ -115,14 +116,18 @@
       color: var(--text-color);
   }
 
-  .card-subtitle {
-      font-size: 11px;
-      color: var(--text-secondary);
-      font-weight: 500;
-  }
-
   .toggle-card {
       min-height: 56px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+  }
+
+  .scope-note {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--text-secondary);
   }
 
  /* Switch Styling */
@@ -167,6 +172,11 @@
 
  input:checked + .slider {
      background: var(--primary-gradient);
+ }
+
+ input:focus-visible + .slider {
+     outline: 2px solid var(--primary-color);
+     outline-offset: 3px;
  }
 
  input:checked + .slider:before {

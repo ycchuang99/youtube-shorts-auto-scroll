@@ -2,60 +2,24 @@
  * @jest-environment jsdom
  */
 
+const fs = require('fs')
+const path = require('path')
+const englishMessages = require('../_locales/en/messages.json')
+const popupHtml = fs.readFileSync(path.join(__dirname, '../src/popup/popup.html'), 'utf8')
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function renderPopupDom() {
-  document.body.innerHTML = `
-    <div class="container">
-      <div class="header">
-        <div class="logo-icon-wrapper">
-          <img src="../../assets/images/scroll-icon-128.png" alt="Logo" class="logo-icon">
-        </div>
-        <h1>Shorts Auto Scroll</h1>
-      </div>
+  document.documentElement.innerHTML = popupHtml
+}
 
-      <div class="controls-grid">
-        <div class="card toggle-card">
-          <div class="card-info">
-            <div class="card-title">Auto Scroll</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggleButton">
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="card toggle-card">
-          <div class="card-info">
-            <div class="card-title">Skip Ads</div>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="adSkipToggle">
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="card speed-card">
-        <div class="speed-card-header">
-          <div class="card-info">
-            <div class="card-title">Playback Speed</div>
-          </div>
-          <div class="speed-value" id="playbackSpeedValue">1x</div>
-        </div>
-        <div class="speed-control">
-          <div class="speed-range-shell">
-            <input type="range" id="playbackSpeedSlider" class="speed-range" min="0" max="4" step="1" value="2" aria-label="Playback speed">
-          </div>
-          <div class="speed-scale" aria-hidden="true">
-            <span>0.5x</span>
-            <span>1x</span>
-            <span>2x</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+function setLocale(locale) {
+  const messages = require(`../_locales/${locale}/messages.json`)
+  chrome.i18n = {
+    getMessage: jest.fn((key, substitution) => {
+      if (key === '@@ui_locale') return locale
+      return (messages[key] || englishMessages[key])?.message.replace('$speed$', substitution) || ''
+    })
+  }
 }
 
 async function loadPopupScript(storageState = {}) {
@@ -85,6 +49,7 @@ describe('Popup UI', () => {
   beforeEach(() => {
     renderPopupDom()
     jest.clearAllMocks()
+    setLocale('en')
     chrome.tabs.query.mockResolvedValue([{ id: 1, url: 'https://youtube.com/shorts/test' }])
     chrome.tabs.sendMessage.mockResolvedValue()
   })
@@ -110,15 +75,50 @@ describe('Popup UI', () => {
 
     test('should expose accessible labels and compact titles', () => {
       const cardTitles = Array.from(document.querySelectorAll('.card-title')).map(node => node.textContent)
-      const speedSlider = document.getElementById('playbackSpeedSlider')
-
-      expect(cardTitles).toEqual(['Auto Scroll', 'Skip Ads', 'Playback Speed'])
-      expect(speedSlider.getAttribute('aria-label')).toBe('Playback speed')
-      expect(document.querySelector('.card-subtitle')).toBeNull()
+      expect(cardTitles).toEqual(['Auto Scroll', 'Skip Shorts ads', 'Playback Speed'])
+      for (const control of document.querySelectorAll('input')) {
+        expect(document.getElementById(control.getAttribute('aria-labelledby')).textContent).toBeTruthy()
+      }
+      expect(document.querySelector('.scope-note').textContent).toContain('Regular videos and their ads are unaffected')
     })
   })
 
   describe('Popup Script Integration', () => {
+    test.each(['en', 'zh_TW', 'zh_CN'])('should localize visible and accessible content in %s', async (locale) => {
+      setLocale(locale)
+      const messages = require(`../_locales/${locale}/messages.json`)
+      await loadPopupScript({ playbackSpeed: 1.5 })
+
+      expect(document.documentElement.lang).toBe(locale.replace('_', '-'))
+      expect(document.title).toBe(messages.extensionName.message)
+      for (const element of document.querySelectorAll('[data-i18n]')) {
+        expect(element.textContent).toBe(messages[element.dataset.i18n].message)
+      }
+      const speedText = messages.speedValue.message.replace('$speed$', '1.5')
+      expect(document.getElementById('playbackSpeedValue').textContent).toBe(speedText)
+      expect(document.getElementById('playbackSpeedSlider').getAttribute('aria-valuetext')).toBe(speedText)
+      expect(Array.from(document.querySelectorAll('[data-speed]'), node => node.textContent)).toEqual(
+        ['0.5', '1', '2'].map(speed => messages.speedValue.message.replace('$speed$', speed))
+      )
+
+      const toggle = document.getElementById('adSkipToggle')
+      toggle.checked = false
+      toggle.dispatchEvent(new Event('change'))
+      await flushPromises()
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({ adSkipEnabled: false })
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, { action: 'toggleAdSkip', enabled: false })
+    })
+
+    test('should preserve readable English when a translation is unavailable', async () => {
+      chrome.i18n.getMessage.mockReturnValue('')
+      await loadPopupScript({ playbackSpeed: 0.75 })
+
+      expect(document.documentElement.lang).toBe('en')
+      expect(document.title).toBe('YouTube Shorts Auto Scroll')
+      expect(document.getElementById('adSkipLabel').textContent).toBe('Skip Shorts ads')
+      expect(document.getElementById('playbackSpeedValue').textContent).toBe('0.75x')
+    })
+
     test('should hydrate controls from saved storage state', async () => {
       await loadPopupScript({
         enabled: false,
@@ -249,6 +249,19 @@ describe('Popup UI', () => {
       expect(chrome.tabs.sendMessage).not.toHaveBeenCalled()
     })
 
+    test('should keep settings when there is no active tab', async () => {
+      chrome.tabs.query.mockResolvedValueOnce([])
+      await loadPopupScript()
+
+      const toggle = document.getElementById('toggleButton')
+      toggle.checked = false
+      toggle.dispatchEvent(new Event('change'))
+      await flushPromises()
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({ enabled: false })
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled()
+    })
+
     test('should still persist skip-ads changes when messaging fails', async () => {
       chrome.tabs.sendMessage.mockRejectedValueOnce(new Error('Content script unavailable'))
       await loadPopupScript({ adSkipEnabled: true })
@@ -265,5 +278,22 @@ describe('Popup UI', () => {
         enabled: false
       })
     })
+  })
+
+  test('should provide complete locales for popup and manifest with English fallback', () => {
+    const manifest = require('../manifest.json')
+    expect(manifest.default_locale).toBe('en')
+    expect(manifest.name).toBe('__MSG_extensionName__')
+    expect(manifest.description).toBe('__MSG_extensionDescription__')
+    expect(manifest.action.default_title).toBe('__MSG_extensionName__')
+    for (const locale of ['en', 'zh_TW', 'zh_CN']) {
+      const messages = require(`../_locales/${locale}/messages.json`)
+      expect(Object.keys(messages).sort()).toEqual(Object.keys(englishMessages).sort())
+      expect(messages.extensionDescription.message.length).toBeLessThanOrEqual(132)
+      for (const element of document.querySelectorAll('[data-i18n]')) {
+        expect(messages[element.dataset.i18n].message).toBeTruthy()
+      }
+      expect(messages.speedValue.placeholders.speed.content).toBe('$1')
+    }
   })
 })
