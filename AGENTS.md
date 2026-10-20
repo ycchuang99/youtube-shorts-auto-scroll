@@ -48,6 +48,7 @@
 - `npm run build` runs `package` to produce a fresh `youtube-shorts-auto-scroll.zip`.
 - `scripts/package.js` checks version consistency, locale keys/placeholders, manifest assets, and archive contents; includes `manifest.json`, `src/`, `assets/`, and `_locales/`.
 - Keep manifest, package, and lockfile versions consistent. The ZIP excludes docs, tests, tools, and the old demo image.
+- When repairing or regenerating the lockfile, use a clean directory without `node_modules`, then verify a fresh `npm ci`. Updating the lock against an existing platform-specific installation can omit optional dependencies needed on CI.
 
 ## Editing guidance
 - When changing behavior, inspect `tests/content.test.js` first; it is the best map of expected content-script behavior.

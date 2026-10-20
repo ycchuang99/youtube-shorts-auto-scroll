@@ -2,6 +2,14 @@
 
 All notable changes to the YouTube Shorts Auto Scroll extension will be documented in this file.
 
+## [1.4.1] - 2026-10-20
+
+### Fixed
+- Repaired missing platform-specific optional dependencies in the lockfile so clean CI and release installs can complete.
+- Retained the Shorts-only behavior and translations from 1.4.0.
+
+The 1.4.0 tag's release build failed during dependency installation; 1.4.1 replaces that unpublished build without rewriting the tag.
+
 ## [1.4.0] - 2026-10-20
 
 ### Fixed

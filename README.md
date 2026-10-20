@@ -13,7 +13,7 @@ A Chrome extension that moves to the next YouTube Short when the current one end
 - Use the popup in English, Traditional Chinese, or Simplified Chinese.
 - Keep preferences with Chrome's built-in settings sync.
 
-Version 1.4.0 confines these actions to the active Shorts card. Regular YouTube videos are outside the feature scope. The extension does not intercept network requests or fast-forward, mute, or seek through video ads. Sponsored-card skipping depends on YouTube's page structure; it is not guaranteed to remove every ad or prevent YouTube playback warnings.
+Version 1.4.1 confines these actions to the active Shorts card. Regular YouTube videos are outside the feature scope. The extension does not intercept network requests or fast-forward, mute, or seek through video ads. Sponsored-card skipping depends on YouTube's page structure; it is not guaranteed to remove every ad or prevent YouTube playback warnings.
 
 ## Install
 
@@ -43,7 +43,7 @@ The content script is registered for YouTube pages so it can recognize YouTube's
 
 ## Publishing
 
-CI runs lint, coverage tests, and packaging on Node.js 22 and 24. Pushing a version tag such as `v1.4.0` runs the same checks and publishes `youtube-shorts-auto-scroll.zip` as a GitHub release asset. Chrome Web Store submission is a separate step; a GitHub release does not publish a store update.
+CI runs lint, coverage tests, and packaging on Node.js 22 and 24. Pushing a version tag such as `v1.4.1` runs the same checks and publishes `youtube-shorts-auto-scroll.zip` as a GitHub release asset. Chrome Web Store submission is a separate step; a GitHub release does not publish a store update.
 
 See the [submission checklist](store/submission.md), [English listing](store/listing-en.md), [繁體中文 listing](store/listing-zh-TW.md), and [简体中文 listing](store/listing-zh-CN.md).
 

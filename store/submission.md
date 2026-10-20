@@ -1,4 +1,4 @@
-# Chrome Web Store submission — 1.4.0
+# Chrome Web Store submission — 1.4.1
 
 This is an update to the existing item `ejiondkplaoolmmnepmpipdpaeibfjen`, not a new listing.
 
@@ -12,7 +12,7 @@ This is an update to the existing item `ejiondkplaoolmmnepmpipdpaeibfjen`, not a
 6. Set the privacy policy URL to `https://github.com/ycchuang99/youtube-shorts-auto-scroll/blob/main/docs/privacy-policy.md` after that file is published and reachable.
 7. Review the permission explanations and privacy declarations below, save the changes, then submit for review. Report “submitted” or “in review” until the dashboard actually confirms publication.
 
-The GitHub release workflow runs on a version tag such as `v1.4.0`, checks that the tag matches the package version, and attaches the verified ZIP. It does not submit to Chrome Web Store.
+The GitHub release workflow runs on a version tag such as `v1.4.1`, checks that the tag matches the package version, and attaches the verified ZIP. It does not submit to Chrome Web Store.
 
 ## Screenshots
 
@@ -29,7 +29,7 @@ Provide automatic navigation and playback controls for the YouTube Shorts feed, 
 - **storage:** Save the user's auto-scroll, sponsored-card skip, and playback speed preferences with `chrome.storage.sync`. Chrome may synchronize these preferences through the user's account when browser sync is enabled.
 - **YouTube content-script access (`*://*.youtube.com/*`):** YouTube navigates between home, regular videos, and Shorts without reloading the page. Registering the script on YouTube lets it detect entry into Shorts even when the user did not initially load a Shorts URL. Every player action is scoped to the active Shorts card, and Shorts processing stops on other routes.
 
-Version 1.4.0 removes the unused `activeTab` permission. The popup uses only the active tab's ID to send settings changes and does not inspect its URL or title. Remove the old `activeTab` justification when updating the dashboard.
+Version 1.4.1 removes the unused `activeTab` permission compared with the published 1.3.2 version. The popup uses only the active tab's ID to send settings changes and does not inspect its URL or title. Remove the old `activeTab` justification when updating the dashboard.
 
 ## Privacy declarations
 
@@ -59,4 +59,4 @@ No extension account, subscription, or special credentials are required. YouTube
 
 ## Changes for this review
 
-Version 1.4.0 limits player actions to Shorts, removes the regular-video ad manipulation from earlier versions, stops Shorts processing when leaving the feed, and removes the unused `activeTab` permission. It adds localized metadata and popup strings and clarifies sponsored-card skipping and settings sync. It does not promise to bypass YouTube's ad-blocker checks or guarantee ad-free playback.
+Version 1.4.1 limits player actions to Shorts, removes the regular-video ad manipulation from earlier versions, stops Shorts processing when leaving the feed, and removes the unused `activeTab` permission. It adds localized metadata and popup strings and clarifies sponsored-card skipping and settings sync. It does not promise to bypass YouTube's ad-blocker checks or guarantee ad-free playback.

@@ -1,6 +1,6 @@
 {
   "name": "youtube-shorts-auto-scroll",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Automatic scrolling and playback controls for YouTube Shorts",
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('youtube-shorts-auto-scroll.zip', { force: true })\"",
